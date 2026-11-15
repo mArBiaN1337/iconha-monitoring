@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[cod]
+*.py[oc]
+*$py.class
+build/
+dist/
+wheels/
+*.egg-info/
+
+# Virtual environments
+.venv/
+
+# Local generated files
+web/status.json
+web/card_whatsapp.png
+requirements.txt
+
+# Environment 
+.env
+.DS_Store
+Thumbs.db

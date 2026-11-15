@@ -1,0 +1,84 @@
+# .github/workflows/deploy.yml
+name: CI/CD — Iconha Flood Monitor
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  GCP_REGION: southamerica-east1
+  GCS_BUCKET: monitor-rio-iconha-public
+  FUNCTION_NAME: iconha-hydro-engine
+
+jobs:
+  test:
+    name: 1. Run Hydrological Unit Tests (uv + pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Sync dependencies and run pytest
+        run: |
+          uv sync --all-groups
+          uv run pytest -v
+
+  deploy:
+    name: 2. Deploy Backend & Frontend to Google Cloud
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Export locked requirements.txt for GCP Buildpacks
+        run: uv export --format requirements-txt --no-dev --no-hashes > requirements.txt
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy Python Backend to Cloud Run Functions (2nd Gen)
+        run: |
+          gcloud functions deploy ${{ env.FUNCTION_NAME }} \
+            --gen2 \
+            --runtime=python312 \
+            --region=${{ env.GCP_REGION }} \
+            --source=. \
+            --entry-point=run_pipeline \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=512Mi \
+            --timeout=60s \
+            --set-env-vars="GCS_PUBLIC_BUCKET=${{ env.GCS_BUCKET }}"
+
+      - name: Sync Modular Frontend (./web) to Cloud Storage CDN
+        run: |
+          gcloud storage rsync ./web gs://${{ env.GCS_BUCKET }} \
+            --recursive \
+            --exclude="status\.json|card_whatsapp\.png"
+
+      - name: Trigger Immediate Pipeline Execution
+        run: |
+          FUNC_URL=$(gcloud functions describe ${{ env.FUNCTION_NAME }} --gen2 --region=${{ env.GCP_REGION }} --format="value(serviceConfig.uri)")
+          curl -s -f "$FUNC_URL"

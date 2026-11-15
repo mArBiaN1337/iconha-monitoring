@@ -1,0 +1,37 @@
+[project]
+name = "iconha-monitoring"
+version = "0.1.0"
+description = "Hydrological flood and severe weather early warning system for the Rio Iconha watershed (ES, Brazil)"
+readme = "README.md"
+authors = [
+    { name = "mArBiaN1337", email = "marcellustb@hotmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "functions-framework>=3.10.2",
+    "google-cloud-storage>=2.18.0",
+    "pillow>=10.4.0",
+    "requests>=2.32.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "scipy>=1.14.0", # Used only offline in scripts/calibrate_copula.py
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.pyright]
+extraPaths = ["."]
+venvPath = "."
+venv = ".venv"
+
+[project.scripts]
+iconha-monitoring = "iconha_monitoring:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Monitor Rio Iconha - ES</title>
+  <link rel="stylesheet" href="./css/main.css" />
+</head>
+<body>
+
+  <!-- BLOCK 1: COLOR-CODED RISK BANNER -->
+  <header class="banner" id="riskBanner">
+    <div class="banner-top">
+      <span>Bacia do Rio Iconha • ES</span>
+      <span id="updatedAt">Carregando...</span>
+    </div>
+    <div class="banner-title" id="riskTitle">NÍVEL VERDE: NORMALIDADE</div>
+    <div class="banner-desc" id="riskAdvice">Consultando modelo hidrológico da bacia...</div>
+  </header>
+
+  <!-- BLOCK 2: UPSTREAM (CABECEIRA) VS LOCAL (SEDE) -->
+  <section class="grid-2">
+    <div class="card">
+      <div class="card-tag">Cabeceira (Acima)</div>
+      <div class="card-sub">Crubixá / Duas Barras</div>
+      <div class="metric-big"><span id="up24h">--</span> <span class="metric-unit">mm (24h)</span></div>
+      <div class="metric-foot">Janela 6h (Tc): <span id="upTc6h">--</span> mm</div>
+    </div>
+    <div class="card">
+      <div class="card-tag">Iconha (Sede)</div>
+      <div class="card-sub">Centro / Vale Urbano</div>
+      <div class="metric-big"><span id="loc24h">--</span> <span class="metric-unit">mm (24h)</span></div>
+      <div class="metric-foot">Janela 6h (Tc): <span id="locTc6h">--</span> mm</div>
+    </div>
+  </section>
+
+  <!-- BLOCK 3: SCS-CN EFFECTIVE RUNOFF & SOIL MEMORY (API_t) -->
+  <section class="card">
+    <div class="soil-row">
+      <span class="soil-title">Escoamento Superficial (Q<sub>eff</sub>): <strong id="qEff24h">--</strong> mm</span>
+      <span class="soil-badge" id="soilStatus">AMC I</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="soilBar"></div>
+    </div>
+    <div class="hydro-meta">
+      <span>Umidade Solo (API<sub>t</sub>): <strong id="apiT">--</strong> mm</span>
+      <span>Retorno Conjunto: <strong id="returnPeriod">--</strong> anos</span>
+    </div>
+  </section>
+
+  <!-- BLOCK 4: 12-HOUR UPSTREAM FORECAST CHART -->
+  <section class="card">
+    <div class="chart-header">
+      <span>Chuva nas Cabeceiras (Próximas 12h)</span>
+      <span>mm/h</span>
+    </div>
+    <div class="bars-wrap" id="chartBars"></div>
+  </section>
+
+  <!-- BLOCK 5: ONE-TAP WHATSAPP SHARE & EMERGENCY FOOTER -->
+  <section class="actions">
+    <button class="btn-wa" id="shareBtn" type="button">
+      <span>Compartilhar Alerta no WhatsApp</span>
+    </button>
+    <a class="btn-card" href="./card_whatsapp.png" download="alerta_iconha.png">
+      Baixar Card
+    </a>
+  </section>
+
+  <footer class="footer">
+    <strong>Defesa Civil: 199 | Bombeiros: 193</strong> • <span id="appVersion">v0.1.0</span><br />
+    Monitoramento preventivo independente (SCS-CN + Cópula de Gumbel).
+  </footer>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
