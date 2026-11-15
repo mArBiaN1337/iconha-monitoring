@@ -1,5 +1,5 @@
 # .github/workflows/deploy.yml
-name: CI/CD — Iconha Flood Monitor
+name: CI/CD — Iconha Flood Monitoring
 
 on:
   push:
@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
 
 env:
-  GCP_REGION: southamerica-east1
-  GCS_BUCKET: monitor-rio-iconha-public
-  FUNCTION_NAME: iconha-hydro-engine
+  GCP_REGION: us-east1
+  GCS_BUCKET: iconha-monitoring-public   # Match your exact $BUCKET_NAME
+  FUNCTION_NAME: iconha-monitoring-engine
 
 jobs:
   test:
@@ -58,7 +58,7 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Deploy Python Backend to Cloud Run Functions (2nd Gen)
+      - name: Deploy Private Python Backend to Cloud Run Functions (2nd Gen)
         run: |
           gcloud functions deploy ${{ env.FUNCTION_NAME }} \
             --gen2 \
@@ -67,18 +67,34 @@ jobs:
             --source=. \
             --entry-point=run_pipeline \
             --trigger-http \
-            --allow-unauthenticated \
+            --no-allow-unauthenticated \
             --memory=512Mi \
             --timeout=60s \
             --set-env-vars="GCS_PUBLIC_BUCKET=${{ env.GCS_BUCKET }}"
 
-      - name: Sync Modular Frontend (./web) to Cloud Storage CDN
+      - name: Configure Artifact Registry Cleanup Policy (Stay Under 0.5 GB Free Tier)
+        run: |
+          cat << 'EOF' > cleanup-policy.json
+          [
+            {
+              "name": "delete-old-builds",
+              "action": {"type": "Delete"},
+              "mostRecentVersions": {"keepCount": 1}
+            }
+          ]
+          EOF
+          gcloud artifacts repositories set-cleanup-policies gcf-artifacts \
+            --location=${{ env.GCP_REGION }} \
+            --policy=cleanup-policy.json || true
+
+      - name: Sync Modular Frontend (./web) to Cloud Storage
         run: |
           gcloud storage rsync ./web gs://${{ env.GCS_BUCKET }} \
             --recursive \
             --exclude="status\.json|card_whatsapp\.png"
 
-      - name: Trigger Immediate Pipeline Execution
+      - name: Trigger Authenticated Pipeline Run
         run: |
           FUNC_URL=$(gcloud functions describe ${{ env.FUNCTION_NAME }} --gen2 --region=${{ env.GCP_REGION }} --format="value(serviceConfig.uri)")
-          curl -s -f "$FUNC_URL"
+          TOKEN=$(gcloud auth print-identity-token)
+          curl -s -f -H "Authorization: Bearer $TOKEN" "$FUNC_URL"
