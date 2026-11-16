@@ -12,8 +12,8 @@ wheels/
 .venv/
 
 # Local generated files
-src/web/status.json
-src/web/card_whatsapp.png
+web/status.json
+web/card_whatsapp.png
 requirements.txt
 
 # Environment 

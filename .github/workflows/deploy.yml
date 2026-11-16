@@ -89,7 +89,7 @@ jobs:
 
       - name: Sync Modular Frontend (./web) to Cloud Storage
         run: |
-          gcloud storage rsync ./src/web gs://${{ env.GCS_BUCKET }} \
+          gcloud storage rsync ./web gs://${{ env.GCS_BUCKET }} \
             --recursive \
             --exclude="status\.json|card_whatsapp\.png"
 
