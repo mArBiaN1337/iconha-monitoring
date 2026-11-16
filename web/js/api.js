@@ -1,8 +1,10 @@
 const CACHE_KEY = "iconha_flood_status_v2";
+const utf8Decoder = new TextDecoder("utf-8");
 
 export const DEMO_FALLBACK = {
   version: "0.1.0",
-  updated_at_br: "Modo Offline / Demo",
+  updated_at_iso: "2026-11-16T00:00:00-03:00",
+  updated_at_br: "16/11/2026 às 00:00",
   risk_tier: "VERDE",
   banner: {
     color_hex: "#2E7D32",
@@ -22,6 +24,12 @@ export const DEMO_FALLBACK = {
     local_iconha_24h_mm: 3.8,
     local_iconha_tc_6h_mm: 2.0
   },
+  points: [
+    { id: "P1_CRUBIXA", zone: "upper", weight: 0.35, rain_past_72h_mm: 4.0 },
+    { id: "P2_MONTE_ALEGRE", zone: "upper", weight: 0.30, rain_past_72h_mm: 3.5 },
+    { id: "P3_DUAS_BARRAS", zone: "middle", weight: 0.25, rain_past_72h_mm: 2.8 },
+    { id: "P4_ICONHA_SEDE", zone: "lower", weight: 0.10, rain_past_72h_mm: 1.5 }
+  ],
   chart_12h_upstream: [
     { hour: "14:00", mm: 0.0 }, { hour: "15:00", mm: 0.5 }, { hour: "16:00", mm: 1.4 },
     { hour: "17:00", mm: 1.2 }, { hour: "18:00", mm: 0.4 }, { hour: "19:00", mm: 0.0 },
@@ -31,17 +39,30 @@ export const DEMO_FALLBACK = {
 };
 
 export async function fetchBasinStatus() {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return readLocalFallback();
+  }
+
   try {
     const res = await fetch(`./status.json?t=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const buffer = await res.arrayBuffer();
+    const data = JSON.parse(utf8Decoder.decode(buffer));
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    return { data, isCached: false };
+    return { data, isCached: false, isDemo: false };
   } catch (_) {
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      return { data: JSON.parse(cached), isCached: true };
-    }
-    return { data: DEMO_FALLBACK, isCached: true };
+    return readLocalFallback();
   }
+}
+
+function readLocalFallback() {
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) {
+    try {
+      return { data: JSON.parse(cached), isCached: true, isDemo: false };
+    } catch (_) {
+      // Ignore corrupted local cache and fall back to demo baseline
+    }
+  }
+  return { data: DEMO_FALLBACK, isCached: true, isDemo: true };
 }

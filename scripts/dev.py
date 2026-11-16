@@ -11,6 +11,19 @@ if str(REPO_ROOT) not in sys.path:
 from src.iconha_monitoring.pipeline import execute_pipeline
 
 
+class Utf8HTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
+    """Serves static PWA files with explicit UTF-8 charset headers."""
+
+    extensions_map = {
+        **http.server.SimpleHTTPRequestHandler.extensions_map,
+        ".html": "text/html; charset=utf-8",
+        ".css": "text/css; charset=utf-8",
+        ".js": "application/javascript; charset=utf-8",
+        ".mjs": "application/javascript; charset=utf-8",
+        ".json": "application/json; charset=utf-8",
+    }
+
+
 def main():
     # Ensure local execution writes to ./web/ instead of GCS
     os.environ.pop("GCS_PUBLIC_BUCKET", None)
@@ -21,8 +34,7 @@ def main():
     os.chdir(web_dir)
 
     port = 8000
-    handler = http.server.SimpleHTTPRequestHandler
-    with socketserver.TCPServer(("", port), handler) as httpd:
+    with socketserver.TCPServer(("", port), Utf8HTTPRequestHandler) as httpd:
         print(f"2. Serving Zero-Typing PWA Dashboard at http://localhost:{port}")
         print("   Press Ctrl+C to stop.")
         httpd.serve_forever()

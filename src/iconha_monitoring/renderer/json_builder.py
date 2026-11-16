@@ -1,6 +1,12 @@
+import json
 from datetime import datetime
 from src.iconha_monitoring import __version__
 from src.iconha_monitoring.config import TIER_CONFIG, TZ_BR
+
+
+def serialize_status_json(payload: dict) -> str:
+    """Serializes the status payload to UTF-8 JSON preserving Portuguese accents."""
+    return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
 def build_status_payload(hydro_result: dict, telemetry: dict) -> dict:

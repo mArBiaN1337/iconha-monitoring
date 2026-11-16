@@ -1,5 +1,29 @@
 from io import BytesIO
+from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
+
+
+def _resolve_unicode_font_path() -> str | None:
+    """Finds a TrueType font supporting Portuguese diacritics across OSes."""
+    candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+        "C:/Windows/Fonts/segoeuib.ttf",
+        "C:/Windows/Fonts/arialbd.ttf",
+    ]
+    try:
+        import matplotlib
+
+        candidates.append(
+            str(Path(matplotlib.get_data_path()) / "fonts" / "ttf" / "DejaVuSans-Bold.ttf")
+        )
+    except ImportError:
+        pass
+
+    for path_str in candidates:
+        if Path(path_str).is_file():
+            return path_str
+    return None
 
 
 def generate_whatsapp_card(payload: dict) -> bytes:
@@ -7,12 +31,15 @@ def generate_whatsapp_card(payload: dict) -> bytes:
     W, H = 1080, 1080
     img = Image.new("RGB", (W, H), color=(15, 23, 42))
     draw = ImageDraw.Draw(img)
+    font_path = _resolve_unicode_font_path()
 
     def get_font(size: int):
-        try:
-            return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size)
-        except OSError:
-            return ImageFont.load_default(size=size)
+        if font_path:
+            try:
+                return ImageFont.truetype(font_path, size)
+            except OSError:
+                pass
+        return ImageFont.load_default(size=size)
 
     f_title = get_font(44)
     f_sub = get_font(28)

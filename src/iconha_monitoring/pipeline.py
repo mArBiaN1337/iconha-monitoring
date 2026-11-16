@@ -20,13 +20,16 @@ def execute_pipeline():
     publish_artifacts(status_payload, png_bytes)
 
     return (
-        json.dumps({
-            "status": "ok",
-            "version": status_payload["version"],
-            "risk_tier": status_payload["risk_tier"],
-            "effective_runoff_24h_mm": status_payload["summary"]["effective_runoff_24h_mm"],
-            "joint_return_period_years": status_payload["summary"]["joint_return_period_years"],
-        }),
+        json.dumps(
+            {
+                "status": "ok",
+                "version": status_payload["version"],
+                "risk_tier": status_payload["risk_tier"],
+                "effective_runoff_24h_mm": status_payload["summary"]["effective_runoff_24h_mm"],
+                "joint_return_period_years": status_payload["summary"]["joint_return_period_years"],
+            },
+            ensure_ascii=False,
+        ),
         200,
-        {"Content-Type": "application/json"},
+        {"Content-Type": "application/json; charset=utf-8"},
     )
