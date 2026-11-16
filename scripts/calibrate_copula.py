@@ -1,8 +1,14 @@
+import sys
 import json
 from datetime import datetime
 from pathlib import Path
 import requests
 from scipy import stats
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from src.iconha_monitoring.config import API_DECAY_K_DAILY, TZ_BR
 
 
