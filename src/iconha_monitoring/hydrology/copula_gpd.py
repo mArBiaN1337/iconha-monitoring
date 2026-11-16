@@ -19,16 +19,20 @@ def gpd_cdf(
     exceedance_rate: float = 0.05,
 ) -> float:
     """Evaluates the cumulative non-exceedance probability F(x) using a POT GPD."""
-    if x <= threshold_u:
-        return max(0.001, (1.0 - exceedance_rate) * (x / max(threshold_u, 1.0)))
+    x_val = max(0.0, float(x or 0.0))
+    sigma_safe = max(float(scale_sigma), 1e-6)
+    exc_safe = min(max(float(exceedance_rate), 1e-6), 0.999)
 
-    z = (x - threshold_u) / scale_sigma
+    if x_val <= threshold_u:
+        return max(0.001, (1.0 - exc_safe) * (x_val / max(threshold_u, 1.0)))
+
+    z = (x_val - threshold_u) / sigma_safe
     if abs(shape_xi) < 1e-6:
         tail_prob = math.exp(-z)
     else:
         tail_prob = max(1e-9, 1.0 + shape_xi * z) ** (-1.0 / shape_xi)
 
-    prob = 1.0 - exceedance_rate * tail_prob
+    prob = 1.0 - exc_safe * tail_prob
     return min(max(prob, 0.0001), 0.999999)
 
 
@@ -45,7 +49,7 @@ def gumbel_copula_joint_return_period(
     active_params = params if params is not None else load_copula_params()
 
     exc_rate = float(active_params.get("exceedance_rate", 0.05))
-    ev_per_yr = float(active_params.get("events_per_year", events_per_year))
+    ev_per_yr = max(1e-6, float(active_params.get("events_per_year", events_per_year)))
 
     u = gpd_cdf(
         p_6h_mm,

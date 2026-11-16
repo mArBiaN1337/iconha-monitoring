@@ -7,6 +7,10 @@ def compute_scs_effective_runoff(
     Deterministic Path: Adjusts SCS Curve Number dynamically based on API_t
     (AMC I, II, or III) and calculates Effective Surface Runoff (Q_eff in mm).
     """
+    precip_mm = max(0.0, float(precip_mm or 0.0))
+    api_mm = max(0.0, float(api_mm or 0.0))
+    cn_ii_base = min(max(float(cn_ii_base), 30.0), 99.5)
+
     # Classic Hawkins et al. (1985) AMC conversion formulas
     cn_i = (4.2 * cn_ii_base) / (10.0 - 0.058 * cn_ii_base)
     cn_iii = (23.0 * cn_ii_base) / (10.0 + 0.13 * cn_ii_base)

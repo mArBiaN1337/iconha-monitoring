@@ -38,7 +38,7 @@ def evaluate_basin_hydrology(raw_locations: list[dict]) -> dict:
         try:
             curr_idx = times.index(now_str)
         except ValueError:
-            curr_idx = len(times) - 48  # Fallback to start of 48h forecast window
+            curr_idx = max(0, len(times) - 48)  # Fallback to start of 48h forecast window
 
         past_slice = precip[max(0, curr_idx - 336) : curr_idx]  # Past 14 days (336h)
         past_72h_sum = sum(precip[max(0, curr_idx - 72) : curr_idx])

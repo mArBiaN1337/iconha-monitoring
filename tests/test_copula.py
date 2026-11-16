@@ -28,3 +28,14 @@ def test_return_period_increases_with_compound_extremes():
 def test_default_copula_params_file_loader():
     res = gumbel_copula_joint_return_period(p_6h_mm=10.0, api_mm=20.0)
     assert "joint_return_period_years" in res
+
+
+def test_copula_handles_zero_and_negative_inputs():
+    zero_res = gumbel_copula_joint_return_period(
+        p_6h_mm=0.0, api_mm=0.0, params=SAMPLE_PARAMS
+    )
+    neg_res = gumbel_copula_joint_return_period(
+        p_6h_mm=-5.0, api_mm=-10.0, params=SAMPLE_PARAMS
+    )
+    assert zero_res["joint_return_period_years"] >= 0.0
+    assert neg_res["joint_return_period_years"] == zero_res["joint_return_period_years"]
