@@ -135,30 +135,58 @@ def main():
     print("=" * 85)
 
     # Generate Graphical Evidence Chart via Matplotlib
-    plt.figure(figsize=(12, 6))
-    plt.style.use('dark_background')
-    
-    plt.plot(timestamps, runoff_vals, label="Effective Surface Runoff Q_eff (mm)", color="#38bdf8", linewidth=2)
-    
-    # Pass a proper datetime object to axvline instead of a string
+    plt.style.use("default")
+    fig, ax = plt.subplots(figsize=(12, 6), facecolor="white")
+    ax.set_facecolor("white")
+
+    ax.plot(
+        timestamps,
+        runoff_vals,
+        label="Effective Surface Runoff Q_eff (mm)",
+        color="#0284c7",
+        linewidth=2,
+    )
+
+    # Convert datetime to a float matplotlib date number for axvline typing
     flood_peak_dt = datetime.fromisoformat("2020-01-17T21:30")
-    flood_peak_x  = mdates.date2num(flood_peak_dt)
-    plt.axvline(x=flood_peak_x, color="#ef4444", linestyle="--", label="Actual Flood Peak (Jan 17, 21:30)")
-    
-    plt.title("Iconha Flood Model Backtest — January 17, 2020 Event Replay", fontsize=14, fontweight="bold", pad=15)
-    plt.xlabel("Timeline (January 2020)", fontsize=11)
-    plt.ylabel("Effective Runoff Q_eff (mm)", fontsize=11)
-    
-    # Format the x-axis nicely for datetime objects
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%d/%m %H:%M'))
-    plt.gcf().autofmt_xdate()
-    
-    plt.grid(True, alpha=0.2)
-    plt.legend(loc="upper left")
-    plt.tight_layout()
-    
-    chart_path = REPO_ROOT / "imgs-analysis" / "backtest_jan2020_result.png"
-    plt.savefig(chart_path, dpi=300)
+    flood_peak_x = float(mdates.date2num(flood_peak_dt))
+    ax.axvline(
+        x=flood_peak_x,
+        color="#ef4444",
+        linestyle="--",
+        label="Actual Flood Peak (Jan 17, 21:30)",
+    )
+
+    ax.set_title(
+        "Iconha Flood Model Backtest — January 17, 2020 Event Replay",
+        fontsize=14,
+        fontweight="bold",
+        pad=15,
+        color="#0f172a",
+    )
+    ax.set_xlabel("Timeline (January 2020)", fontsize=11, color="#1e293b")
+    ax.set_ylabel("Effective Runoff Q_eff (mm)", fontsize=11, color="#1e293b")
+
+    # Configure and display explicit x and y scales
+    ax.xaxis.set_major_locator(mdates.HourLocator(interval=6))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m %H:%M"))
+    ax.tick_params(
+        axis="both",
+        which="major",
+        labelsize=10,
+        colors="#1e293b",
+        labelbottom=True,
+        labelleft=True,
+    )
+    fig.autofmt_xdate()
+
+    ax.grid(True, alpha=0.35, linestyle="--", color="#94a3b8")
+    ax.legend(loc="upper left", frameon=True, facecolor="white", edgecolor="#cbd5e1")
+    fig.tight_layout()
+
+    chart_path = REPO_ROOT / "imgs" / "backtest_jan2020_result.png"
+    chart_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(chart_path, dpi=300, facecolor="white", bbox_inches="tight")
     print(f"\nGraphical evidence chart successfully saved to: {chart_path}")
     plt.show()
 
