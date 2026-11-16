@@ -48,7 +48,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Export locked requirements.txt for GCP Buildpacks
-        run: uv export --format requirements-txt --no-dev --no-hashes > requirements.txt
+        run: uv export --format requirements-txt --no-dev --no-hashes --no-emit-project > requirements.txt
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2

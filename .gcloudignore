@@ -7,4 +7,3 @@ scripts/
 web/
 *.pyc
 .pytest_cache/
-README.md
