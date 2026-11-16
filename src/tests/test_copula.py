@@ -3,7 +3,7 @@ from src.iconha_monitoring.hydrology.copula_gpd import gumbel_copula_joint_retur
 
 SAMPLE_PARAMS = {
     "exceedance_rate": 0.05,
-    "events_per_year": 1460.0,
+    "events_per_year": 120.0,
     "p6h_threshold_u": 14.5,
     "p6h_sigma": 11.2,
     "p6h_xi": 0.18,

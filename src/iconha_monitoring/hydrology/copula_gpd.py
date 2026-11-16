@@ -36,7 +36,7 @@ def gumbel_copula_joint_return_period(
     p_6h_mm: float,
     api_mm: float,
     params: dict | None = None,
-    events_per_year: float = 1460.0,
+    events_per_year: float = 120.0,
 ) -> dict:
     """
     Couples 6-hour precipitation intensity and API_t via an upper-tail-dependent
