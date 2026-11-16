@@ -11,7 +11,7 @@ def main():
     print("1. Running hydrological pipeline and generating ./web/status.json + card_whatsapp.png...")
     execute_pipeline()
 
-    web_dir = Path(__file__).resolve().parents[1] / "web"
+    web_dir = Path(__file__).resolve().parents[1] / "src" / "web"
     os.chdir(web_dir)
 
     port = 8000

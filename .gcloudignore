@@ -7,3 +7,5 @@ scripts/
 web/
 *.pyc
 .pytest_cache/
+
+src/web/

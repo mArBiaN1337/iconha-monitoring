@@ -22,7 +22,7 @@ def publish_artifacts(status_payload: dict, png_bytes: bytes) -> None:
         blob_png.upload_from_string(png_bytes, content_type="image/png")
         logging.info("Published artifacts to gs://%s", bucket_name)
     else:
-        web_dir = Path(__file__).resolve().parents[3] / "web"
+        web_dir = Path(__file__).resolve().parents[2] / "web"
         web_dir.mkdir(parents=True, exist_ok=True)
         (web_dir / "status.json").write_bytes(json_bytes)
         (web_dir / "card_whatsapp.png").write_bytes(png_bytes)
