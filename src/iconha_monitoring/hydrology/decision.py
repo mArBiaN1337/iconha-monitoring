@@ -106,15 +106,15 @@ def evaluate_basin_hydrology(raw_locations: list[dict]) -> dict:
 
     # Dual Decision Engine Tier Classification
     if (
-        q_eff_24h >= 45.0
-        or q_eff_6h >= 25.0
-        or t_joint_years >= 10.0
+        q_eff_24h >= 34.0
+        or q_eff_6h >= 38.0
+        or t_joint_years >= 9.0
     ):
         tier = "VERMELHO"
     elif (
-        q_eff_24h >= 25.0
-        or q_eff_6h >= 12.0
-        or t_joint_years >= 3.0
+        q_eff_24h >= 23.0
+        or q_eff_6h >= 15.0
+        or t_joint_years >= 2.0
     ):
         tier = "LARANJA"
     elif (

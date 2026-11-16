@@ -82,9 +82,9 @@ def simulate_hour(raw_locations: list[dict], curr_idx: int, copula_params: dict,
     copula_res = gumbel_copula_joint_return_period(upstream_tc_6h_max, weighted_api_t, copula_params)
     t_joint = copula_res["joint_return_period_years"]
 
-    if q_24h >= 45.0 or q_6h >= 25.0 or t_joint >= 10.0:
+    if q_24h >= 34.0 or q_6h >= 38.0 or t_joint >= 9.0:
         tier = "VERMELHO"
-    elif q_24h >= 25.0 or q_6h >= 12.0 or t_joint >= 3.0:
+    elif q_24h >= 23.0 or q_6h >= 15.0 or t_joint >= 2.0:
         tier = "LARANJA"
     elif q_24h >= 8.0 or weighted_api_t >= 60.0 or t_joint >= 1.2:
         tier = "AMARELO"

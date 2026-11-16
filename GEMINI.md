@@ -4,6 +4,9 @@
 - **Hard Rule:** Every architecture decision, code addition, and cloud configuration MUST operate 100% within Google Cloud's **Always Free Tier** limits. 
 - **Prohibited:** Never propose paid Cloud SQL databases, paid Firestore instances, paid logging sinks, custom domains with billing, or multi-region storage. All hosting, compute, and storage must cost exactly **$0.00 USD/month**.
 
+## General Observations
+- Yes, you can use `$env:MPLBACKEND='Agg'; uv run python scripts/backtest_jan2020.py` when trying to run a python script using matplotlib that outputs an image. 
+
 ## 1. Mission & Architecture
 - **Objective:** Open-source, low-cost flood and severe weather early warning system for **Iconha, Espírito Santo, Brazil**, monitoring the **Rio Iconha watershed** (headwaters in Alfredo Chaves/Crubixá/Monte Alegre down to Duas Barras and Iconha Sede).
 - **Pattern:** "Compute-Once, Read-Many" Static Pipeline.
