@@ -48,7 +48,7 @@ def build_status_payload(hydro_result: dict, telemetry: dict) -> dict:
         "points": points,
         "telemetry": telemetry,
         "disclaimer": (
-            "Sistema independente de monitoramento hidrometeorológico (SCS-CN + Cópula de Gumbel). "
-            "Não substitui alertas oficiais. Em emergência, ligue Defesa Civil (199) ou Bombeiros (193)."
+            "Monitoramento Hidrológico Independente - Rio Iconha (modelos científicos SCS-CN + Cópula de Gumbel). "
+            "Iniciativa técnica e científica independente de acompanhamento preventivo da bacia."
         ),
     }

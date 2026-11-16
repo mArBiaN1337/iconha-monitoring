@@ -76,6 +76,6 @@ TIER_CONFIG = {
         "color_rgb": (198, 40, 40),
         "title": "NÍVEL VERMELHO: ALERTA MÁXIMO",
         "headline": "RISCO EXTREMO DE ENXURRADA / CHEIA NA BACIA.",
-        "advice": "Saturação crítica e chuva intensa acima. Siga a Defesa Civil (199) imediatamente.",
+        "advice": "Saturação crítica e chuva intensa nas cabeceiras. Procure áreas elevadas e seguras imediatamente.",
     },
 }
