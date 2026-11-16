@@ -142,7 +142,8 @@ def main():
     
     # Pass a proper datetime object to axvline instead of a string
     flood_peak_dt = datetime.fromisoformat("2020-01-17T21:30")
-    plt.axvline(x=flood_peak_dt, color="#ef4444", linestyle="--", label="Actual Flood Peak (Jan 17, 21:30)")
+    flood_peak_x  = mdates.date2num(flood_peak_dt)
+    plt.axvline(x=flood_peak_x, color="#ef4444", linestyle="--", label="Actual Flood Peak (Jan 17, 21:30)")
     
     plt.title("Iconha Flood Model Backtest — January 17, 2020 Event Replay", fontsize=14, fontweight="bold", pad=15)
     plt.xlabel("Timeline (January 2020)", fontsize=11)
@@ -156,7 +157,7 @@ def main():
     plt.legend(loc="upper left")
     plt.tight_layout()
     
-    chart_path = REPO_ROOT / "backtest_jan2020_result.png"
+    chart_path = REPO_ROOT / "imgs-analysis" / "backtest_jan2020_result.png"
     plt.savefig(chart_path, dpi=300)
     print(f"\nGraphical evidence chart successfully saved to: {chart_path}")
     plt.show()

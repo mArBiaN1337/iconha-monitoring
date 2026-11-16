@@ -21,4 +21,4 @@ requirements.txt
 .DS_Store
 Thumbs.db
 
-imgs-analysis/*
+imgs/*

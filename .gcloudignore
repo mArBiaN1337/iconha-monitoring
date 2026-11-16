@@ -8,4 +8,5 @@ web/
 *.pyc
 .pytest_cache/
 src/web/
+imgs/
 GEMINI.md
