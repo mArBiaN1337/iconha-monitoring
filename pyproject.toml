@@ -1,6 +1,6 @@
 [project]
 name = "iconha-monitoring"
-version = "1.1.0"
+version = "1.1.2"
 description = "Hydrological flood and severe weather early warning system for the Rio Iconha watershed (ES, Brazil)"
 readme = "README.md"
 authors = [
