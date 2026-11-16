@@ -1,12 +1,12 @@
 {
-  "calibrated_at": "2026-11-15T00:00:00-03:00",
+  "calibrated_at": "2026-11-16T15:47:42.344117-03:00",
   "exceedance_rate": 0.05,
-  "events_per_year": 12.0,
-  "p6h_threshold_u": 14.5,
-  "p6h_sigma": 11.2,
-  "p6h_xi": 0.18,
-  "api_threshold_u": 48.0,
-  "api_sigma": 19.5,
-  "api_xi": 0.08,
-  "gumbel_theta": 1.45
-}   
+  "events_per_year": 1460.0,
+  "p6h_threshold_u": 6.4,
+  "p6h_sigma": 5.74,
+  "p6h_xi": 0.197,
+  "api_threshold_u": 103.49,
+  "api_sigma": 27.47,
+  "api_xi": 0.069,
+  "gumbel_theta": 1.326
+}

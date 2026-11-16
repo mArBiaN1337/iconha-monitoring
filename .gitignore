@@ -20,3 +20,5 @@ requirements.txt
 .env
 .DS_Store
 Thumbs.db
+
+imgs-analysis/*

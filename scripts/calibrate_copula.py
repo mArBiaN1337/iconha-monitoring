@@ -80,7 +80,7 @@ def calibrate():
     out_path = (
         Path(__file__).resolve().parents[1]
         / "src"
-        / "iconha_monitor"
+        / "iconha_monitoring"
         / "hydrology"
         / "copula_params.json"
     )
