@@ -247,8 +247,18 @@ iconha-monitoring/
 ## Quickstart & Local Development
 
 ### Prerequisites
-- **Python 3.12+**
-- [**uv**](https://docs.astral.sh/uv/) (fast Python package and environment manager)
+- **Python 3.12+** (`requires-python >= 3.11`)
+- [**uv**](https://docs.astral.sh/uv/) (fast Python package and environment manager), which automatically resolves and installs the project dependencies defined in `pyproject.toml`:
+  - **Runtime Dependencies:**
+    - `functions-framework>=3.10.2` — Google Cloud Run Functions HTTP runtime and local invocation wrapper
+    - `google-cloud-storage>=2.18.0` — Publishes `status.json` and `card_whatsapp.png` to the GCS bucket
+    - `matplotlib>=3.11.2` — Hydrological time-series plotting and backtest verification charts
+    - `pillow>=10.4.0` — In-memory $1080 \times 1080$ PNG rendering for the WhatsApp warning card
+    - `requests>=2.32.0` — HTTP client for Open-Meteo and Brazilian telemetry APIs
+    - `tzdata>=2026.6` — IANA timezone database (`America/Sao_Paulo`)
+  - **Development & Offline Calibration Dependencies (`[dependency-groups.dev]`):**
+    - `pytest>=8.3.0` — Unit and integration test runner
+    - `scipy>=1.14.0` — Used strictly offline in `scripts/calibrate_copula.py` to fit GPD marginals and Kendall's $\tau$
 
 ### 1. Clone & Synchronize Dependencies
 ```bash
