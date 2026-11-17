@@ -20,6 +20,4 @@ requirements.txt
 .env
 .DS_Store
 Thumbs.db
-
-imgs/*
 TO-DO.txt
