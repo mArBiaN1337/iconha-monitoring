@@ -33,7 +33,7 @@ def main():
     web_dir = REPO_ROOT / "web"
     os.chdir(web_dir)
 
-    port = 8000
+    port = int(os.environ.get("PORT", "8000"))
     with socketserver.TCPServer(("", port), Utf8HTTPRequestHandler) as httpd:
         print(f"2. Serving Zero-Typing PWA Dashboard at http://localhost:{port}")
         print("   Press Ctrl+C to stop.")

@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
 
 env:
-  GCP_REGION: us-east1
-  GCS_BUCKET: iconha-monitoring-public   # Match your exact $BUCKET_NAME
-  FUNCTION_NAME: iconha-monitoring-engine
+  GCP_REGION: ${{ vars.GCP_REGION || 'us-east1' }}
+  GCS_BUCKET: ${{ secrets.GCS_PUBLIC_BUCKET || vars.GCS_PUBLIC_BUCKET }}
+  FUNCTION_NAME: ${{ vars.FUNCTION_NAME || 'iconha-monitoring-engine' }}
 
 jobs:
   test:

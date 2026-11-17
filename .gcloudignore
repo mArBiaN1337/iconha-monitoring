@@ -10,3 +10,10 @@ web/
 src/web/
 imgs/
 GEMINI.md
+.env
+.env.*
+*credentials*.json
+*-sa-key.json
+service-account*.json
+cleanup-policy.json
+TO-DO.txt

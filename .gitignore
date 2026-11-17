@@ -15,9 +15,17 @@ wheels/
 web/status.json
 web/card_whatsapp.png
 requirements.txt
+cleanup-policy.json
+.pytest_cache/
 
-# Environment 
+# Environment & Secrets
 .env
+.env.*
+!.env.example
+*credentials*.json
+*-sa-key.json
+service-account*.json
 .DS_Store
 Thumbs.db
 TO-DO.txt
+GEMINI.md

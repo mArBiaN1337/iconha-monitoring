@@ -4,7 +4,7 @@ version = "1.2.2"
 description = "Hydrological flood and severe weather early warning system for the Rio Iconha watershed (ES, Brazil)"
 readme = "README.md"
 authors = [
-    { name = "mArBiaN1337", email = "marcellustb@hotmail.com" }
+    { name = "mArBiaN1337" }
 ]
 requires-python = ">=3.11"
 dependencies = [
