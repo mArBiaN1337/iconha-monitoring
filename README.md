@@ -104,21 +104,27 @@ Rather than relying on a single heuristic, `iconha-monitoring` evaluates watersh
 
 ### Core Hydrological State Variables
 
-Before evaluating the two paths, the engine computes two fundamental state variables for each node $i \in \{1..4\}$ and aggregates them using the spatial basin weights $w_i$:
+Before evaluating the two paths, the engine computes two fundamental state variables for each node $i \in \lbrace 1, 2, 3, 4 \rbrace$ and aggregates them using the spatial basin weights $w_i$:
 
-1. **State Variable 1 — Slow Soil Memory ($API_t$):**
-   A 14-day ($336\text{-hour}$) recursive **Antecedent Precipitation Index** that models continuous soil drainage and saturation decay. Given a daily recession constant $k_{\text{daily}} = 0.88$, the hourly decay factor is derived as:
+#### 1. State Variable 1 — Slow Soil Memory ($API_t$)
+A 14-day ($336\text{-hour}$) recursive **Antecedent Precipitation Index** that models continuous soil drainage and saturation decay. Given a daily recession constant $k_{\text{daily}} = 0.88$, the hourly decay factor is derived as:
 
-   $$k_{\text{hourly}} = \left(k_{\text{daily}}\right)^{1/24} = 0.88^{1/24} \approx 0.99468$$
+$$
+k_{\text{hourly}} = \left(k_{\text{daily}}\right)^{1/24} = 0.88^{1/24} \approx 0.99468
+$$
 
-   Over the rolling 336-hour historical window, soil moisture memory evolves recursively at each hour $t$:
+Over the rolling 336-hour historical window, soil moisture memory evolves recursively at each hour $t$:
 
-   $$API_t = k_{\text{hourly}} \cdot API_{t-1} + P_t$$
+$$
+API_t = k_{\text{hourly}} \cdot API_{t-1} + P_t
+$$
 
-2. **State Variable 2 — Fast Convective Trigger ($P_{6h,\max}$):**
-   To capture intense cloudbursts matching the watershed's Time of Concentration ($T_c = 6\text{ hours}$), the engine scans the upcoming forecast window for the maximum rolling 6-hour accumulated precipitation across the upper and middle headwater zones:
+#### 2. State Variable 2 — Fast Convective Trigger ($P_{6h,\max}$)
+To capture intense cloudbursts matching the watershed's Time of Concentration ($T_c = 6\text{ hours}$), the engine scans the upcoming forecast window for the maximum rolling 6-hour accumulated precipitation across the upper and middle headwater zones:
 
-   $$P_{6h,\max} = \max_{t} \left( \sum_{\tau = t}^{t + 5} P_{\tau} \right)$$
+$$
+P_{6h,\max} = \max_{t} \left( \sum_{\tau = t}^{t + 5} P_{\tau} \right)
+$$
 
 ---
 
@@ -129,21 +135,37 @@ The deterministic path quantifies how much rainfall fails to infiltrate the moun
 #### 1. Hawkins et al. (1985) AMC Boundary Conversions
 From the basin-weighted baseline Curve Number $CN_{II}$ (representing average soil moisture), the dry-soil boundary ($CN_I$, AMC I) and saturated-soil boundary ($CN_{III}$, AMC III) are computed analytically:
 
-$$CN_I = \frac{4.2 \cdot CN_{II}}{10.0 - 0.058 \cdot CN_{II}}, \qquad CN_{III} = \frac{23.0 \cdot CN_{II}}{10.0 + 0.13 \cdot CN_{II}}$$
+$$
+CN_I = \frac{4.2 \cdot CN_{II}}{10.0 - 0.058 \cdot CN_{II}}, \qquad CN_{III} = \frac{23.0 \cdot CN_{II}}{10.0 + 0.13 \cdot CN_{II}}
+$$
 
 #### 2. Continuous Piecewise $API_t$ Interpolation
 Instead of discrete step-function jumps between AMC classes (which cause artificial discontinuities in operational forecasting), `scs_cn.py` interpolates the effective Curve Number $CN(API_t)$ continuously across four physical soil-moisture regimes:
 
-$$CN(API_t) = \begin{cases} CN_I & \text{if } API_t \le 20\text{ mm} \quad \text{(AMC I: Dry Soil)} \\[6pt] CN_I + \left(\dfrac{API_t - 20}{25}\right)(CN_{II} - CN_I) & \text{if } 20 < API_t < 45\text{ mm} \quad \text{(AMC II: Moist Soil)} \\[8pt] CN_{II} + \left(\dfrac{API_t - 45}{30}\right)(CN_{III} - CN_{II}) & \text{if } 45 \le API_t < 75\text{ mm} \quad \text{(AMC II–III: Transition)} \\[6pt] CN_{III} & \text{if } API_t \ge 75\text{ mm} \quad \text{(AMC III: Saturated Soil)} \end{cases}$$
+$$
+CN(API_t) = \begin{cases}
+CN_I & \text{if } API_t \le 20\text{ mm} \quad \text{(AMC I: Dry Soil)} \\
+CN_I + \left(\dfrac{API_t - 20}{25}\right)(CN_{II} - CN_I) & \text{if } 20 < API_t < 45\text{ mm} \quad \text{(AMC II: Moist Soil)} \\
+CN_{II} + \left(\dfrac{API_t - 45}{30}\right)(CN_{III} - CN_{II}) & \text{if } 45 \le API_t < 75\text{ mm} \quad \text{(AMC II–III: Transition)} \\
+CN_{III} & \text{if } API_t \ge 75\text{ mm} \quad \text{(AMC III: Saturated Soil)}
+\end{cases}
+$$
 
 #### 3. Potential Maximum Soil Retention ($S$) and Effective Runoff ($Q_{eff}$)
 Given the dynamic Curve Number $CN(API_t)$, the potential maximum soil moisture retention $S$ (in $\text{mm}$) and initial abstraction $I_a = 0.2 S$ (surface depression storage and canopy interception) are evaluated as:
 
-$$S = \frac{25400}{CN(API_t)} - 254, \qquad I_a = 0.2 \cdot S$$
+$$
+S = \frac{25400}{CN(API_t)} - 254, \qquad I_a = 0.2 \cdot S
+$$
 
 Finally, for a given precipitation accumulation $P$ (evaluated over both the $24\text{-hour}$ basin forecast and the $6\text{-hour}$ headwater $T_c$ window), Effective Surface Runoff $Q_{eff}$ is obtained via the SCS runoff equation:
 
-$$Q_{eff} = \begin{cases} 0 & \text{if } P \le I_a \\[8pt] \dfrac{(P - I_a)^2}{P + 0.8 \cdot S} & \text{if } P > I_a \end{cases}$$
+$$
+Q_{eff} = \begin{cases}
+0 & \text{if } P \le I_a \\
+\dfrac{(P - I_a)^2}{P + 0.8 \cdot S} & \text{if } P > I_a
+\end{cases}
+$$
 
 ---
 
@@ -152,25 +174,36 @@ $$Q_{eff} = \begin{cases} 0 & \text{if } P \le I_a \\[8pt] \dfrac{(P - I_a)^2}{P
 Compound flash floods are bivariate phenomena: a moderate storm on saturated soil or an extreme cloudburst on moderately moist soil can produce catastrophic synergy. The probabilistic path applies **Extreme Value Theory (EVT)** to compute the **Joint Return Period ($T_{joint}$, in years)** of simultaneously observing a 6-hour convective burst $P_{6h,\max}$ and an antecedent soil moisture state $API_t$.
 
 #### 1. Peaks-Over-Threshold (POT) Generalized Pareto Distribution (GPD) Marginals
-For each random variable $X \in \{P_{6h,\max},\, API_t\}$ with pre-calibrated 95th-percentile threshold $u$ (exceedance rate $\lambda_u = 0.05$), scale parameter $\sigma > 0$, and tail shape parameter $\xi$, the cumulative non-exceedance probability $F_X(x)$ for tail events ($x > u$) is modeled by a **Generalized Pareto Distribution**:
+For each random variable $X \in \lbrace P_{6h,\max}, API_t \rbrace$ with pre-calibrated 95th-percentile threshold $u$ (exceedance rate $\lambda_u = 0.05$), scale parameter $\sigma > 0$, and tail shape parameter $\xi$, the cumulative non-exceedance probability $F_X(x)$ for tail events ($x > u$) is modeled by a **Generalized Pareto Distribution**:
 
-$$F_X(x) = \begin{cases} 1 - \lambda_u \left(1 + \xi \left(\dfrac{x - u}{\sigma}\right)\right)^{-1/\xi} & \text{for } \xi \neq 0 \\[10pt] 1 - \lambda_u \exp\left(-\dfrac{x - u}{\sigma}\right) & \text{for } \xi = 0 \end{cases}$$
+$$
+F_X(x) = \begin{cases}
+1 - \lambda_u \left(1 + \xi \left(\dfrac{x - u}{\sigma}\right)\right)^{-1/\xi} & \text{for } \xi \neq 0 \\
+1 - \lambda_u \exp\left(-\dfrac{x - u}{\sigma}\right) & \text{for } \xi = 0
+\end{cases}
+$$
 
 Letting $u_1 = F_{P_{6h}}(P_{6h,\max})$ and $v_1 = F_{API}(API_t)$ denote the resulting uniform marginal probabilities on $(0, 1)$, the engine next evaluates their joint tail behavior.
 
 #### 2. Bivariate Gumbel-Hougaard Copula
 Because extreme convective storms and wet-season soil saturation exhibit strong **upper-tail dependence** (they co-occur during persistent South Atlantic Convergence Zone — *ZCAS* — episodes), their joint cumulative distribution is coupled via the **Gumbel-Hougaard extreme-value copula** with dependence parameter $\theta \ge 1$ ($\theta = 1.326$ calibrated for the Rio Iconha headwaters):
 
-$$C_{\theta}(u_1, v_1) = \exp\left( -\left[ (-\ln u_1)^{\theta} + (-\ln v_1)^{\theta} \right]^{1/\theta} \right)$$
+$$
+C_{\theta}(u_1, v_1) = \exp\left( -\left[ (-\ln u_1)^{\theta} + (-\ln v_1)^{\theta} \right]^{1/\theta} \right)
+$$
 
 #### 3. Joint Exceedance Probability & Return Period ($T_{joint}$)
-By the inclusion-exclusion principle (survival probability), the **joint exceedance probability** $P(P_{6h} > p \;\cap\; API > a)$ that *both* rainfall intensity and antecedent soil saturation are simultaneously exceeded is:
+By the inclusion-exclusion principle (survival probability), the **joint exceedance probability** $P(P_{6h} > p \cap API > a)$ that *both* rainfall intensity and antecedent soil saturation are simultaneously exceeded is:
 
-$$p_{\text{joint}} = 1 - u_1 - v_1 + C_{\theta}(u_1, v_1)$$
+$$
+p_{\text{joint}} = 1 - u_1 - v_1 + C_{\theta}(u_1, v_1)
+$$
 
 Given $N_{\text{yr}} = 1,460$ non-overlapping 6-hour observation blocks per year, the **Bivariate Joint Return Period ($T_{joint}$, in years)** is:
 
-$$T_{\text{joint}} = \frac{1}{N_{\text{yr}} \cdot \max\left(10^{-7},\; 1 - u_1 - v_1 + C_{\theta}(u_1, v_1)\right)}$$
+$$
+T_{\text{joint}} = \frac{1}{N_{\text{yr}} \cdot \max\left(10^{-7},\quad 1 - u_1 - v_1 + C_{\theta}(u_1, v_1)\right)}
+$$
 
 Pre-calibrated parameters stored in `src/iconha_monitoring/hydrology/copula_params.json`:
 - **6-Hour Rainfall Marginal ($P_{6h}$):** $u = 6.40\text{ mm}$, $\sigma = 5.74$, $\xi = 0.197$
