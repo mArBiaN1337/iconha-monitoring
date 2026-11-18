@@ -34,6 +34,7 @@ BASIN_POINTS = [
         "lon": -40.8600,
         "weight": 0.35,
         "cn_ii": 79.0,  # Steep mountain scarp with mixed pasture/forest
+        "lag_hours": 3,  # Kinematic wave travel time to lower floodplain (~22 km)
     },
     {
         "id": "P2_MONTE_ALEGRE",
@@ -43,6 +44,7 @@ BASIN_POINTS = [
         "lon": -40.9100,
         "weight": 0.30,
         "cn_ii": 80.0,  # High-gradient crystalline escarpment
+        "lag_hours": 3,  # Kinematic wave travel time to lower floodplain (~18 km)
     },
     {
         "id": "P3_DUAS_BARRAS",
@@ -52,6 +54,7 @@ BASIN_POINTS = [
         "lon": -40.8822,
         "weight": 0.25,
         "cn_ii": 78.0,  # Confluence bottleneck valley
+        "lag_hours": 1,  # Kinematic wave travel time from Duas Barras to Iconha Sede (~10 km)
     },
     {
         "id": "P4_ICONHA_SEDE",
@@ -61,14 +64,17 @@ BASIN_POINTS = [
         "lon": -40.8108,
         "weight": 0.10,
         "cn_ii": 85.0,  # Urbanized floodplain
+        "lag_hours": 0,  # Reference basin outlet
     },
 ]
 
 # Hydrological constants
-API_DECAY_K_DAILY = 0.88  # Daily soil drainage recession factor (0.85 - 0.92)
-TC_WINDOW_HOURS = 6       # Time of concentration fast-trigger window (3h - 6h)
-PAST_DAYS_FETCH = 14      # 14-day rolling memory window for API_t
-FORECAST_DAYS_FETCH = 2   # 48-hour lookahead
+API_DECAY_K_DAILY = 0.88               # Daily soil drainage recession factor (0.85 - 0.92)
+TC_WINDOW_HOURS = 6                    # Time of concentration fast-trigger window (3h - 6h)
+SCS_IA_RATIO = 0.05                    # Tropical steep-escarpment initial abstraction ratio (Ia = 0.05 * S)
+HYSTERESIS_DEESCALATION_FACTOR = 0.90  # 10% deadband buffer on tier de-escalation to prevent flickering
+PAST_DAYS_FETCH = 14                   # 14-day rolling memory window for API_t
+FORECAST_DAYS_FETCH = 2                # 48-hour lookahead
 
 TIER_CONFIG = {
     "VERDE": {

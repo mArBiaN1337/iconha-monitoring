@@ -5,7 +5,7 @@ from src.iconha_monitoring.ingestion.telemetry import fetch_official_brazilian_t
 from src.iconha_monitoring.hydrology.decision import evaluate_basin_hydrology
 from src.iconha_monitoring.renderer.json_builder import build_status_payload
 from src.iconha_monitoring.renderer.whatsapp_card import generate_whatsapp_card
-from src.iconha_monitoring.storage.gcs import publish_artifacts
+from src.iconha_monitoring.storage.gcs import publish_artifacts, read_previous_tier
 
 logging.basicConfig(level=logging.INFO)
 
@@ -14,7 +14,8 @@ def execute_pipeline():
     """End-to-end execution of the Iconha Flood Monitoring Pipeline."""
     raw_weather = fetch_basin_weather()
     telemetry = fetch_official_brazilian_telemetry()
-    hydro_result = evaluate_basin_hydrology(raw_weather)
+    previous_tier = read_previous_tier()
+    hydro_result = evaluate_basin_hydrology(raw_weather, previous_tier=previous_tier)
     status_payload = build_status_payload(hydro_result, telemetry)
     png_bytes = generate_whatsapp_card(status_payload)
     publish_artifacts(status_payload, png_bytes)

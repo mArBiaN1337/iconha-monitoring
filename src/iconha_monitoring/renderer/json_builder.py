@@ -20,8 +20,22 @@ def build_status_payload(hydro_result: dict, telemetry: dict) -> dict:
         for p in points
         if p["zone"] in ("upper", "middle")
     )
+    basin_past_72h = sum(p.get("rain_past_72h_mm", 0.0) * p["weight"] for p in points)
     local_iconha = next(p for p in points if p["zone"] == "lower")
     hours_labels = points[0]["next_12h_times"]
+
+    if "chart_timeline_12h" in hydro_result:
+        chart_12h = hydro_result["chart_timeline_12h"]
+    else:
+        chart_12h = [
+            {
+                "hour": hours_labels[i],
+                "mm": hydro_result["upstream_hourly_12h"][i],
+                "kind": "forecast",
+                "is_now": i == 0,
+            }
+            for i in range(len(hours_labels))
+        ]
 
     return {
         "version": __version__,
@@ -30,6 +44,9 @@ def build_status_payload(hydro_result: dict, telemetry: dict) -> dict:
         "risk_tier": tier,
         "banner": TIER_CONFIG[tier],
         "summary": {
+            "trend_state": hydro_result.get("trend_state", "STABLE"),
+            "trend_label": hydro_result.get("trend_label", "→ Tendência Estável"),
+            "peak_6h_window": hydro_result.get("peak_6h_window", "--:-- às --:--"),
             "api_t_mm": hydro_result["weighted_api_t_mm"],
             "soil_status": hydro_result["scs_24h"]["amc_class"],
             "cn_effective": hydro_result["scs_24h"]["cn_effective"],
@@ -38,13 +55,15 @@ def build_status_payload(hydro_result: dict, telemetry: dict) -> dict:
             "joint_return_period_years": hydro_result["copula"]["joint_return_period_years"],
             "upstream_forecast_24h_mm": round(upstream_24h, 1),
             "upstream_tc_6h_mm": hydro_result["upstream_tc_6h_mm"],
+            "upstream_past_6h_mm": hydro_result.get("upstream_past_6h_mm", 0.0),
+            "upstream_past_72h_mm": hydro_result.get("upstream_past_72h_mm", 0.0),
             "local_iconha_24h_mm": local_iconha["forecast_24h_mm"],
             "local_iconha_tc_6h_mm": local_iconha["rolling_6h_tc_mm"],
+            "local_iconha_past_6h_mm": local_iconha.get("rain_past_6h_mm", 0.0),
+            "local_iconha_past_72h_mm": local_iconha.get("rain_past_72h_mm", 0.0),
+            "rain_past_72h_mm": round(basin_past_72h, 1),
         },
-        "chart_12h_upstream": [
-            {"hour": hours_labels[i], "mm": hydro_result["upstream_hourly_12h"][i]}
-            for i in range(len(hours_labels))
-        ],
+        "chart_12h_upstream": chart_12h,
         "points": points,
         "telemetry": telemetry,
         "disclaimer": (

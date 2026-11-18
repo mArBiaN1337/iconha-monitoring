@@ -1,4 +1,5 @@
 import { formatTimestampBR } from "./components.js";
+import { getEdgeCacheSlot } from "./api.js";
 
 const SHARE_TITLE = "Monitoramento Hidrológico Independente - Rio Iconha";
 
@@ -18,15 +19,20 @@ export function buildWhatsAppSummaryText(d) {
   const s = d?.summary || {};
   const updatedStr = formatTimestampBR(d);
   const panelUrl = getCleanPanelUrl();
+  const trendStr = s.trend_label ? ` (${s.trend_label})` : "";
+  const peakWin =
+    s.peak_6h_window && s.peak_6h_window !== "--:-- às --:--"
+      ? ` [${s.peak_6h_window}]`
+      : "";
 
   return (
     `*${SHARE_TITLE}*\n` +
-    `*Status:* ${b.title || "NÍVEL VERDE: NORMALIDADE"}\n` +
+    `*Status:* ${b.title || "NÍVEL VERDE: NORMALIDADE"}${trendStr}\n` +
     `Atualizado em: ${updatedStr}\n\n` +
-    `• *Cabeceira (Acima - 24h):* ${s.upstream_forecast_24h_mm} mm (Pico 6h: ${s.upstream_tc_6h_mm} mm)\n` +
-    `• *Iconha Sede (24h):* ${s.local_iconha_24h_mm} mm (Pico 6h: ${s.local_iconha_tc_6h_mm} mm)\n` +
+    `• *Cabeceira 90% (Próx. 24h):* ${s.upstream_forecast_24h_mm} mm (Pico 6h: ${s.upstream_tc_6h_mm} mm${peakWin})\n` +
+    `• *Iconha Sede 10% (Próx. 24h):* ${s.local_iconha_24h_mm} mm (Pico 6h: ${s.local_iconha_tc_6h_mm} mm)\n` +
     `• *Escoamento Superficial (Q_eff):* ${s.effective_runoff_24h_mm} mm\n` +
-    `• *Umidade do Solo (API):* ${s.api_t_mm} mm (${s.soil_status})\n` +
+    `• *Umidade do Solo (API 14d):* ${s.api_t_mm} mm (${s.soil_status})\n` +
     `• *Tempo de Retorno Conjunto:* ${s.joint_return_period_years} anos\n\n` +
     `${b.headline ? `${b.headline} ` : ""}${b.advice || ""}\n\n` +
     `Painel ao vivo: ${panelUrl}`
@@ -34,7 +40,8 @@ export function buildWhatsAppSummaryText(d) {
 }
 
 async function fetchCardImageFile() {
-  const res = await fetch(`./card_whatsapp.png?t=${Date.now()}`, { cache: "no-store" });
+  const slot = getEdgeCacheSlot();
+  const res = await fetch(`./card_whatsapp.png?v=${slot}`, { cache: "default" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const blob = await res.blob();
   return new File([blob], "card_whatsapp.png", { type: "image/png" });

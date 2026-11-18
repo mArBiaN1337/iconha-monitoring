@@ -1,6 +1,6 @@
 [project]
 name = "iconha-monitoring"
-version = "1.2.2"
+version = "2.0.0"
 description = "Hydrological flood and severe weather early warning system for the Rio Iconha watershed (ES, Brazil)"
 readme = "README.md"
 authors = [
@@ -10,7 +10,6 @@ requires-python = ">=3.11"
 dependencies = [
     "functions-framework>=3.10.2",
     "google-cloud-storage>=2.18.0",
-    "matplotlib>=3.11.2",
     "pillow>=10.4.0",
     "requests>=2.32.0",
     "tzdata>=2026.6",
@@ -18,6 +17,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "matplotlib>=3.11.2", # Used offline in scripts/backtest_jan2020.py
     "pytest>=8.3.0",
     "scipy>=1.14.0", # Used only offline in scripts/calibrate_copula.py
 ]

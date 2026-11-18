@@ -37,5 +37,15 @@ def test_copula_handles_zero_and_negative_inputs():
     neg_res = gumbel_copula_joint_return_period(
         p_6h_mm=-5.0, api_mm=-10.0, params=SAMPLE_PARAMS
     )
-    assert zero_res["joint_return_period_years"] >= 0.0
+    assert zero_res["joint_return_period_years"] >= 0.1
     assert neg_res["joint_return_period_years"] == zero_res["joint_return_period_years"]
+
+
+def test_copula_extreme_tail_stability_without_underflow():
+    res_100 = gumbel_copula_joint_return_period(
+        p_6h_mm=140.0, api_mm=150.0, params=SAMPLE_PARAMS
+    )
+    res_200 = gumbel_copula_joint_return_period(
+        p_6h_mm=220.0, api_mm=210.0, params=SAMPLE_PARAMS
+    )
+    assert res_200["joint_return_period_years"] > res_100["joint_return_period_years"]

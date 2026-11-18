@@ -14,6 +14,7 @@
     <div class="banner-top">
       <span class="basin-label">Monitoramento Independente • Rio Iconha (ES)</span>
       <div class="resilience-meta">
+        <span class="trend-badge" id="trendBadge" title="Tendência hidrológica para as próximas 6 horas">→ Estável</span>
         <span class="conn-badge" id="connBadge" title="Status de conexão com o boletim mais recente">Ao vivo</span>
         <span class="updated-at" id="updatedAt" title="Data e hora da última atualização do boletim">--/--/---- às --:--</span>
       </div>
@@ -27,29 +28,35 @@
 
   <!-- BLOCK 2: SIDE-BY-SIDE BASIN COMPARISON (CABECEIRA VS SEDE) -->
   <section class="grid-2" aria-label="Comparação entre cabeceira e sede urbana">
-    <article class="card metric-card">
+    <article class="card metric-card metric-card--upstream">
       <div class="card-head">
         <span class="card-tag">Cabeceira (Acima)</span>
-        <span class="weight-pill" title="As cabeceiras nas montanhas respondem por 90% do volume de cheia que chega a Iconha.">90% Bacia</span>
+        <span class="weight-pill tooltip-hint" tabindex="0" title="As cabeceiras nas montanhas respondem por 90% do volume de cheia que chega a Iconha.">90% Bacia</span>
       </div>
       <div class="card-sub">Crubixá • Monte Alegre • Duas Barras</div>
-      <p class="card-helper">Onde a enxurrada se forma na serra</p>
+      <p class="card-helper">Previsto próx. 24h (serra)</p>
       <div class="metric-big"><span id="up24h">--</span> <span class="metric-unit">mm (24h)</span></div>
-      <div class="metric-foot tooltip-hint" tabindex="0" title="Máxima chuva acumulada em janela de 6 horas (Tempo de Concentração da bacia).">
-        Pico 6h (T<sub>c</sub>): <strong id="upTc6h">--</strong> mm
+      <div class="metric-foot tooltip-hint" tabindex="0" title="Máxima chuva acumulada em janela de 6 horas (Tempo de Concentração da bacia, incluindo onda em trânsito).">
+        Pico 6h (T<sub>c</sub>): <strong id="upTc6h">--</strong> mm <span class="peak-win" id="upPeakWindow"></span>
+      </div>
+      <div class="metric-obs tooltip-hint" tabindex="0" title="Chuva já caída (observada) nas cabeceiras nas últimas 72 horas.">
+        Já Choveu (72h): <strong id="upPast72h">--</strong> mm
       </div>
     </article>
 
     <article class="card metric-card">
       <div class="card-head">
         <span class="card-tag">Iconha (Sede)</span>
-        <span class="weight-pill" title="A área urbana na planície responde por 10% do peso da bacia, mas sofre o alagamento local.">10% Bacia</span>
+        <span class="weight-pill tooltip-hint" tabindex="0" title="A área urbana na planície responde por 10% do peso da bacia, mas recebe o escoamento das cabeceiras.">10% Bacia</span>
       </div>
       <div class="card-sub">Centro • Vale Urbano</div>
-      <p class="card-helper">Chuva direta na área urbana</p>
+      <p class="card-helper">Previsto próx. 24h (urbano)</p>
       <div class="metric-big"><span id="loc24h">--</span> <span class="metric-unit">mm (24h)</span></div>
       <div class="metric-foot tooltip-hint" tabindex="0" title="Máxima chuva prevista em 6 horas na Sede de Iconha.">
         Pico 6h (T<sub>c</sub>): <strong id="locTc6h">--</strong> mm
+      </div>
+      <div class="metric-obs tooltip-hint" tabindex="0" title="Chuva já caída (observada) na Sede de Iconha nas últimas 72 horas.">
+        Já Choveu (72h): <strong id="locPast72h">--</strong> mm
       </div>
     </article>
   </section>
@@ -57,12 +64,12 @@
   <!-- BLOCK 3: SCS-CN EFFECTIVE RUNOFF & 72H / 14D SOIL SATURATION -->
   <section class="card soil-card" aria-label="Saturação do solo e escoamento superficial">
     <div class="soil-row">
-      <span class="soil-title tooltip-hint" tabindex="0" title="Lâmina de água que não infiltra no solo e escoa direto para o leito do rio (modelo USDA SCS-CN).">
+      <span class="soil-title tooltip-hint" tabindex="0" title="Lâmina de água que não infiltra no solo e escoa direto para o leito do rio (modelo USDA SCS-CN com abstração tropical Ia=0.05S).">
         Escoamento Superficial (Q<sub>eff</sub>): <strong id="qEff24h">--</strong> mm
       </span>
-      <span class="soil-badge" id="soilStatus" title="Condição de Umidade Antecedente do solo: AMC I (seco), AMC II (úmido), AMC III (saturado).">AMC I</span>
+      <span class="soil-badge tooltip-hint" tabindex="0" id="soilStatus" title="Condição de Umidade Antecedente do solo: AMC I (seco), AMC II (úmido), AMC III (saturado).">AMC I</span>
     </div>
-    <p class="helper-text">Saturação do solo nos últimos 14 dias e 72h define quanta chuva vira enxurrada.</p>
+    <p class="helper-text" id="soilExplain">Toque em qualquer indicador sublinhado para ver a explicação técnica.</p>
     <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="15" id="soilProgress">
       <div class="progress-fill" id="soilBar"></div>
     </div>
@@ -72,30 +79,31 @@
       <span>Saturado (AMC III)</span>
     </div>
     <div class="hydro-meta">
-      <span class="tooltip-hint" tabindex="0" title="Índice de Precipitação Antecedente decaído ao longo de 14 dias (336h).">
+      <span class="tooltip-hint" tabindex="0" title="Índice de Precipitação Antecedente decaído ao longo de 14 dias (336h, k=0.88/dia).">
         Solo 14d (API<sub>t</sub>): <strong id="apiT">--</strong> mm
       </span>
-      <span class="tooltip-hint" tabindex="0" title="Média ponderada da chuva observada na bacia nas últimas 72 horas.">
+      <span class="tooltip-hint" tabindex="0" title="Média ponderada da chuva já observada na bacia nas últimas 72 horas.">
         Chuva 72h: <strong id="rain72h">--</strong> mm
       </span>
       <span class="tooltip-hint" tabindex="0" title="Raridade estatística conjunta de chuva intensa + solo encharcado (Cópula de Gumbel).">
-        Retorno: <strong id="returnPeriod">--</strong> anos
+        Retorno: <strong id="returnPeriod">--</strong>
       </span>
     </div>
   </section>
 
-  <!-- BLOCK 4: 12-HOUR UPSTREAM FORECAST CHART -->
-  <section class="card chart-card" aria-label="Previsão horária de chuva nas cabeceiras">
+  <!-- BLOCK 4: 12-HOUR UPSTREAM OBSERVED + FORECAST CHART -->
+  <section class="card chart-card" aria-label="Chuva observada e prevista nas cabeceiras">
     <div class="chart-header">
-      <span>Chuva nas Cabeceiras (Próx. 12h)</span>
+      <span>Cabeceiras: 3h Obs. + 9h Prev.</span>
       <div class="chart-legend">
+        <span class="leg-item"><i class="dot dot-obs"></i>Obs</span>
         <span class="leg-item"><i class="dot dot-low"></i>Fraca</span>
         <span class="leg-item"><i class="dot dot-med"></i>Mod</span>
         <span class="leg-item"><i class="dot dot-high"></i>Forte</span>
         <span class="unit-tag">mm/h</span>
       </div>
     </div>
-    <p class="helper-text" id="chartHint">Previsão horária nas serras — toque ou passe o cursor nas barras.</p>
+    <p class="helper-text" id="chartHint">Barras à esquerda da linha tracejada já caíram; à direita são previstas.</p>
     <div class="bars-wrap" id="chartBars"></div>
   </section>
 
@@ -113,7 +121,7 @@
     <div class="footer-emergency">
       <span>Monitoramento Hidrológico Independente - Rio Iconha</span>
       <span aria-hidden="true">•</span>
-      <span id="appVersion">v0.1.0</span>
+      <span id="appVersion">v2.0.0</span>
     </div>
     <div class="footer-note">
       Iniciativa científica independente de previsão hidrometeorológica (SCS-CN + Cópula de Gumbel).

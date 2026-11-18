@@ -818,12 +818,11 @@ wheels = [
 
 [[package]]
 name = "iconha-monitoring"
-version = "1.2.2"
+version = "2.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "functions-framework" },
     { name = "google-cloud-storage" },
-    { name = "matplotlib" },
     { name = "pillow" },
     { name = "requests" },
     { name = "tzdata" },
@@ -831,6 +830,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "matplotlib" },
     { name = "pytest" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -840,7 +840,6 @@ dev = [
 requires-dist = [
     { name = "functions-framework", specifier = ">=3.10.2" },
     { name = "google-cloud-storage", specifier = ">=2.18.0" },
-    { name = "matplotlib", specifier = ">=3.11.2" },
     { name = "pillow", specifier = ">=10.4.0" },
     { name = "requests", specifier = ">=2.32.0" },
     { name = "tzdata", specifier = ">=2026.6" },
@@ -848,6 +847,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "matplotlib", specifier = ">=3.11.2" },
     { name = "pytest", specifier = ">=8.3.0" },
     { name = "scipy", specifier = ">=1.14.0" },
 ]

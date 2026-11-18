@@ -1,8 +1,33 @@
+import json
 import os
 import logging
 from pathlib import Path
 from google.cloud import storage
 from src.iconha_monitoring.renderer.json_builder import serialize_status_json
+
+
+def read_previous_tier() -> str | None:
+    """
+    [HYDRO-06] Reads the previous risk_tier from local ./web/status.json or GCS status.json
+    so stateless pipeline runs can apply de-escalation hysteresis without a database.
+    """
+    bucket_name = os.environ.get("GCS_PUBLIC_BUCKET")
+    try:
+        if bucket_name:
+            client = storage.Client()
+            bucket = client.bucket(bucket_name)
+            blob = bucket.blob("status.json")
+            if blob.exists():
+                raw = blob.download_as_text(encoding="utf-8")
+                return json.loads(raw).get("risk_tier")
+        else:
+            local_path = Path(__file__).resolve().parents[3] / "web" / "status.json"
+            if local_path.is_file():
+                raw = local_path.read_text(encoding="utf-8")
+                return json.loads(raw).get("risk_tier")
+    except Exception as exc:
+        logging.debug("Could not read previous status.json for hysteresis: %s", exc)
+    return None
 
 
 def publish_artifacts(status_payload: dict, png_bytes: bytes) -> None:

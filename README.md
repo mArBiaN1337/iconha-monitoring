@@ -60,15 +60,18 @@ The system implements a **"Compute-Once, Read-Many" static serverless pipeline**
 1. **Automated 30-Minute Execution:** A **Google Cloud Scheduler** cron job (`*/30 * * * *`) dispatches an OIDC-authenticated request to a private **Python 3.12 Google Cloud Run Function** (`iconha-monitoring-engine`).
 2. **Spatially Weighted Elevation Grid:** The engine ingests 14 days (336 hours) of antecedent hourly precipitation and 48 hours of forecast data from the **Open-Meteo API** (alongside official Brazilian CEMADEN/ANA/INMET station cross-checks) across **4 spatially weighted nodes** along the watershed's elevation profile, assigning **90% of the basin weight** to the upstream headwaters and middle valley:
 
-| Node ID | Basin Location | Hydrological Zone | Coordinates (Lat, Lon) | Basin Weight ($w_i$) | Base Curve Number ($CN_{II}$) |
-| :--- | :--- | :--- | :--- | :---: | :---: |
-| `P1_CRUBIXA` | Crubixá (Alfredo Chaves) | Upper Headwaters (North) | `-20.6400, -40.8600` | **0.35** | `79.0` |
-| `P2_MONTE_ALEGRE` | Alto Rib. Monte Alegre | Upper Headwaters (West) | `-20.6850, -40.9100` | **0.30** | `80.0` |
-| `P3_DUAS_BARRAS` | Duas Barras (Confluence) | Middle Valley Bottleneck | `-20.7291, -40.8822` | **0.25** | `78.0` |
-| `P4_ICONHA_SEDE` | Iconha Sede (Urban Center) | Lower Floodplain | `-20.7928, -40.8108` | **0.10** | `85.0` |
+| Node ID | Basin Location | Hydrological Zone | Coordinates (Lat, Lon) | Basin Weight ($w_i$) | Base Curve Number ($CN_{II}$) | Kinematic Wave Lag ($\tau_i$) |
+| :--- | :--- | :--- | :--- | :---: | :---: | :---: |
+| `P1_CRUBIXA` | Crubixá (Alfredo Chaves) | Upper Headwaters (North) | `-20.6400, -40.8600` | **0.35** | `79.0` | **3h** (~22 km) |
+| `P2_MONTE_ALEGRE` | Alto Rib. Monte Alegre | Upper Headwaters (West) | `-20.6850, -40.9100` | **0.30** | `80.0` | **3h** (~18 km) |
+| `P3_DUAS_BARRAS` | Duas Barras (Confluence) | Middle Valley Bottleneck | `-20.7291, -40.8822` | **0.25** | `78.0` | **1h** (~10 km) |
+| `P4_ICONHA_SEDE` | Iconha Sede (Urban Center) | Lower Floodplain | `-20.7928, -40.8108` | **0.10** | `85.0` | **0h** (Outlet) |
 
-3. **Artifact Generation (`status.json` + WhatsApp Card):** After evaluating basin-wide runoff and joint return periods, the backend serializes a lightweight `status.json` telemetry payload and renders a high-contrast $1080 \times 1080\text{ px}$ **WhatsApp warning card (`card_whatsapp.png`)** in memory via **Pillow**, pushing both to a public **Google Cloud Storage** bucket in `us-east1`.
-4. **Offline-Resilient Zero-Typing PWA:** The frontend (`web/`) is a vanilla HTML/CSS/ES Module Progressive Web App requiring zero text input or user configuration. It caches the latest `status.json` payload in `localStorage` so residents retain access to the last known hydrological trajectory even when severe convective storms disrupt rural cellular connectivity, and enables **1-tap native Web Share (`navigator.share`)** to forward the visual alert card across community WhatsApp groups.
+3. **Artifact Generation (`status.json` + WhatsApp Card):** After evaluating distributed and routed basin runoff, hydrological trajectory (`RISING`, `PEAKING`, `RECEDING`, or `STABLE`), peak 6-hour arrival windows, and joint return periods, the backend serializes a lightweight `status.json` telemetry payload and renders a high-contrast $1080 \times 1080\text{ px}$ **WhatsApp warning card (`card_whatsapp.png`)** in memory via **Pillow** (with `@lru_cache` TrueType font caching and zero heavy plotting dependencies in production), pushing both to a public **Google Cloud Storage** bucket in `us-east1`.
+4. **Offline-Resilient Zero-Typing PWA:** The frontend (`web/`) is a vanilla HTML/CSS/ES Module Progressive Web App requiring zero text input or user configuration. It features:
+   - **Observed vs. Forecasted Separation:** Side-by-side comparison of already fallen rain (`Já Choveu 72h`) against upcoming 24h & 6h peak forecasts, plus a split 12-hour headwater bar chart (**3h Observed + `"AGORA"` boundary + 9h Forecast**).
+   - **Trajectory & Stale-Data Guardrails:** Real-time trend badges (`↗ Subindo`, `⚠ Pico 6h`, `↘ Recuando`), 5-minute background auto-refresh aligned with GCS edge cache slots (`?v=slot`), and automatic high-contrast warnings whenever cached or server data exceeds **2 hours** of age.
+   - **Touch-First Accessibility & 1-Tap WhatsApp Sharing:** Tap-to-explain hydrological indicators for mobile screens and **1-tap native Web Share (`navigator.share`)** to forward the visual alert card across community WhatsApp groups.
 
 ---
 
@@ -86,25 +89,27 @@ On the night of **January 17, 2020**, an extreme orographic cloudburst over the 
 
 Using `scripts/backtest_jan2020.py`, the hydrological engine was replayed hour-by-hour across the January 1–19, 2020 reanalysis timeline. Rather than treating model constants as arbitrary textbook defaults, the January 2020 event replay directly shaped four foundational aspects of the engine's parametrization:
 
-1. **Spatial Headwater Weighting ($90\%$ Upstream Bias) & Orographic Convective Scaling:**
-   Coarse meteorological grids ($\sim 25\text{ km}$ ERA5 resolution) smooth out localized convective cloudbursts forced by the steep crystalline escarpments of Alfredo Chaves ($600\text{–}900\text{ m}$ elevation drop into the Duas Barras valley bottleneck). Replaying the January 2020 storm demonstrated that lowland rainfall measurements at Iconha Sede severely underestimated total basin inflow. This directly drove:
-   - The **90% upstream spatial weight distribution** (`P1_CRUBIXA` $0.35$, `P2_MONTE_ALEGRE` $0.30$, `P3_DUAS_BARRAS` $0.25$) versus only **10%** at `P4_ICONHA_SEDE`.
-   - Restricting the fast convective trigger ($P_{6h,\max}$) exclusively to the `upper` and `middle` headwater zones (`decision.py`), paired with an explicit $2.0\times$ convective orographic scaling factor (`--scale 2.0`) on upper/middle escarpment nodes when replaying coarse reanalysis archives.
-2. **14-Day Soil Memory Decay ($k_{\text{daily}} = 0.88$) & Continuous AMC I–III Interpolation:**
-   Before the catastrophic cloudburst on January 17, intermittent rainfall had already moistened the upper watershed. Backtesting with a static Curve Number ($CN_{II}$) either caused false alarms during isolated dry-spell showers or delayed runoff onset by overestimating initial soil abstraction ($I_a = 0.2S$). Calibrating the 336-hour recursive decay factor to $k_{\text{daily}} = 0.88$ ($k_{\text{hourly}} \approx 0.99468$) and introducing continuous piecewise linear interpolation across **AMC I ($API_t \le 20\text{ mm}$)**, **AMC II ($20\text{–}45\text{ mm}$)**, and **AMC II–III ($45\text{–}75\text{ mm}$)** allowed the model to keep $Q_{eff} = 0\text{ mm}$ through January 15 while rapidly reducing soil retention capacity ($S$) once multi-day pre-wetting overcame initial abstraction on January 16.
-3. **Dual Time-Window Deterministic Runoff Thresholds ($Q_{eff,24h}$ & $Q_{eff,6h}$):**
-   As shown in the backtest hydrograph above, Effective Surface Runoff ($Q_{eff,24h}$) broke above $0\text{ mm}$ at `16/01 12:00 BRT`, crossed the **Amarelo** threshold ($8.0\text{ mm}$) around `16/01 17:00 BRT`, surged past the **Laranja** ($23.0\text{ mm}$) and **Vermelho** ($34.0\text{ mm}$) cutoffs between `17/01 00:00` and `01:00 BRT`, and peaked at $\sim 70.1\text{ mm}$ around `17/01 11:00 BRT` — providing a critical multi-hour forecast lead window ahead of the actual **21:30 BRT flood peak** in Iconha Sede (red dashed line) while sustaining high runoff ($> 46\text{ mm}$) right through impact. Pairing the 24-hour accumulation cutoff ($Q_{eff,24h} \ge 34.0\text{ mm}$) with a fast 6-hour Time-of-Concentration cutoff ($Q_{eff,6h} \ge 38.0\text{ mm}$ for **Vermelho**, $15.0\text{ mm}$ for **Laranja**) ensures the engine captures both prolonged frontal saturation and sudden 6-hour headwater cloudbursts.
-4. **Heavy-Tail GPD Shape ($\xi_{P_{6h}} = 0.197$) & Bivariate Copula Return Period Cutoffs ($T_{joint}$):**
-   Fitting the 2015–2025 ERA5 series (including the January 2020 anomaly) via `scripts/calibrate_copula.py` yielded a positive Fréchet tail shape parameter for 6-hour headwater rainfall ($\xi_{P_{6h}} = 0.197$, $u = 6.40\text{ mm}$, $\sigma = 5.74$) and an upper-tail Gumbel-Hougaard coupling parameter of $\theta = 1.326$. Replaying the January 15–18 timeline against this joint surface anchored the operational return-period boundaries at **$T_{joint} \ge 1.2\text{ yr}$ (Amarelo)**, **$\ge 2.0\text{ yr}$ (Laranja)**, and **$\ge 9.0\text{ yr}$ (Vermelho)**, guaranteeing that compound extremes (intense 6-hour convective bursts landing on elevated $API_t$) trigger maximum alerts even before single-variable thresholds saturate.
+1. **Spatial Headwater Weighting ($90\%$ Upstream Bias), Kinematic Wave Routing ($\tau_i$), & Distributed Runoff Integration:**
+   Coarse meteorological grids ($\sim 25\text{ km}$ ERA5 resolution) smooth out localized convective cloudbursts forced by the steep crystalline escarpments of Alfredo Chaves ($600\text{–}900\text{ m}$ elevation drop into the Duas Barras valley bottleneck). Replaying the January 2020 storm demonstrated that lowland rainfall measurements at Iconha Sede severely underestimated total basin inflow, and that averaging precipitation across nodes *before* applying the convex SCS-CN equation diluted localized cloudbursts (Jensen's Inequality). This directly drove:
+   - The **90% upstream spatial weight distribution** (`P1_CRUBIXA` $0.35$, `P2_MONTE_ALEGRE` $0.30$, `P3_DUAS_BARRAS` $0.25$) versus only **10%** at `P4_ICONHA_SEDE`, integrating distributed point-level runoff ($\sum w_i Q_{eff,i}$) alongside kinematic wave lag times ($\tau_1 = 3\text{h}, \tau_2 = 3\text{h}, \tau_3 = 1\text{h}, \tau_4 = 0\text{h}$) to capture flood waves already in transit from the upper scarp.
+   - Evaluating the fast convective trigger ($P_{6h,\max}$) across a cross-boundary window straddling $t_0$ ($[t_0 - 5\text{h}, t_0 + 24\text{h}]$) on the `upper` and `middle` headwater zones (`decision.py`), paired with bounded convective probability enhancement in live forecasts and a $2.0\times$ convective orographic scaling factor (`--scale 2.0`) when replaying coarse reanalysis archives.
+2. **14-Day Soil Memory Decay ($k_{\text{daily}} = 0.88$), Smooth Hill AMC Saturation, & Tropical Initial Abstraction ($\lambda = 0.05$):**
+   Before the catastrophic cloudburst on January 17, intermittent rainfall had already moistened the upper watershed. Backtesting with a static Curve Number ($CN_{II}$) and textbook midwestern US agricultural abstraction ($I_a = 0.20 S$) either caused false alarms during isolated dry-spell showers or delayed runoff onset on steep mountain slopes. Calibrating the 336-hour recursive decay factor to $k_{\text{daily}} = 0.88$ ($k_{\text{hourly}} \approx 0.99468$), adopting a **tropical steep-escarpment initial abstraction ratio of $\lambda = 0.05$ ($I_a = 0.05 S$)**, and introducing a **$C^\infty$ smooth Hill saturation curve** ($API_{50} = 40.0\text{ mm}, \gamma = 2.2$) between $CN_I$ and $CN_{III}$ eliminated derivative kinks and premature saturation clamping above $75\text{ mm}$.
+3. **Dual Time-Window Deterministic Runoff Thresholds ($Q_{eff,24h}$ & $Q_{eff,6h}$) & De-Escalation Hysteresis:**
+   As shown in the backtest hydrograph above, Effective Surface Runoff ($Q_{eff,24h}$) broke above $0\text{ mm}$ on January 15–16, crossed the **Amarelo** runoff threshold ($8.0\text{ mm}$) around `16/01 17:00 BRT`, surged past the **Laranja** ($23.0\text{ mm}$) and **Vermelho** ($34.0\text{ mm}$) cutoffs between `17/01 00:00` and `01:00 BRT`, and peaked at $\sim 70.2\text{ mm}$ around `17/01 11:00 BRT` — providing a critical **20.5-hour forecast lead window** ahead of the actual **21:30 BRT flood peak** in Iconha Sede (red dashed line) while sustaining high runoff ($> 47\text{ mm}$) right through impact. Pairing the 24-hour accumulation cutoff ($Q_{eff,24h} \ge 34.0\text{ mm}$) with a calibrated fast 6-hour Time-of-Concentration cutoff ($Q_{eff,6h} \ge 24.0\text{ mm}$ for **Vermelho**, $15.0\text{ mm}$ for **Laranja**, $5.0\text{ mm}$ for **Amarelo**) and a **10% stateless deadband hysteresis buffer** prevents alert flickering while capturing sudden 6-hour headwater cloudbursts.
+4. **Heavy-Tail GPD Shape ($\xi_{P_{6h}} = 0.197$) & Log-Survival Bivariate Copula Return Period Cutoffs ($T_{joint}$):**
+   Fitting the 2015–2025 ERA5 series (including the January 2020 anomaly) via `scripts/calibrate_copula.py` yielded a positive Fréchet tail shape parameter for 6-hour headwater rainfall ($\xi_{P_{6h}} = 0.197$, $u = 6.40\text{ mm}$, $\sigma = 5.74$) and an upper-tail Gumbel-Hougaard coupling parameter of $\theta = 1.326$. Replaying the January 15–18 timeline against this joint surface (evaluated in log-survival space via `log1p`/`expm1` to prevent floating-point underflow) anchored the operational return-period boundaries at **$T_{joint} \ge 1.2\text{ yr}$ (Amarelo)**, **$\ge 2.0\text{ yr}$ (Laranja)**, and **$\ge 9.0\text{ yr}$ (Vermelho)**.
 
 #### Operational Severity Tiers (`decision.py`)
 
-| Risk Tier | Alert Level | Trigger Conditions (Deterministic **OR** Probabilistic) | Operational Meaning |
+| Risk Tier | Alert Level | Escalation Trigger Conditions (Deterministic **OR** Probabilistic) | Operational Meaning |
 | :--- | :--- | :--- | :--- |
-| 🟢 **VERDE** | Normalcy | $Q_{eff,24h} < 8.0\text{ mm}$ **and** $API_t < 60.0\text{ mm}$ **and** $T_{joint} < 1.2\text{ yr}$ | Safe soil infiltration; normal river baseflow. |
-| 🟡 **AMARELO** | Observation | $Q_{eff,24h} \ge 8.0\text{ mm}$ **or** $API_t \ge 60.0\text{ mm}$ **or** $T_{joint} \ge 1.2\text{ yr}$ | Wet basin soils or moderate headwater rainfall; monitor updates. |
+| 🟢 **VERDE** | Normalcy | $Q_{eff,24h} < 8.0\text{ mm}$ **and** $Q_{eff,6h} < 5.0\text{ mm}$ **and** $API_t < 60.0\text{ mm}$ **and** $T_{joint} < 1.2\text{ yr}$ | Safe soil infiltration; normal river baseflow. |
+| 🟡 **AMARELO** | Observation | $Q_{eff,24h} \ge 8.0\text{ mm}$ **or** $Q_{eff,6h} \ge 5.0\text{ mm}$ **or** $API_t \ge 60.0\text{ mm}$ **or** $T_{joint} \ge 1.2\text{ yr}$ | Wet basin soils or moderate headwater rainfall; monitor updates. |
 | 🟠 **LARANJA** | Severe Attention | $Q_{eff,24h} \ge 23.0\text{ mm}$ **or** $Q_{eff,6h} \ge 15.0\text{ mm}$ **or** $T_{joint} \ge 2.0\text{ yr}$ | High surface runoff in headwaters; rapid river rise likely. |
-| 🔴 **VERMELHO** | Maximum Alert | $Q_{eff,24h} \ge 34.0\text{ mm}$ **or** $Q_{eff,6h} \ge 38.0\text{ mm}$ **or** $T_{joint} \ge 9.0\text{ yr}$ | Extreme flash flood imminent; seek high ground immediately. |
+| 🔴 **VERMELHO** | Maximum Alert | $Q_{eff,24h} \ge 34.0\text{ mm}$ **or** $Q_{eff,6h} \ge 24.0\text{ mm}$ **or** $T_{joint} \ge 9.0\text{ yr}$ | Extreme flash flood imminent; seek high ground immediately. |
+
+*(Note: Downward tier de-escalation applies a **10% deadband hysteresis factor (`0.90x`)** against the previous active tier stored in `status.json` to prevent alert flickering when metrics hover near a boundary.)*
 
 ---
 
@@ -129,52 +134,49 @@ $$
 API_t = k_{\text{hourly}} \cdot API_{t-1} + P_t
 $$
 
-#### 2. State Variable 2 — Fast Convective Trigger ($P_{6h,\max}$)
-To capture intense cloudbursts matching the watershed's Time of Concentration ($T_c = 6\text{ hours}$), the engine scans the upcoming forecast window for the maximum rolling 6-hour accumulated precipitation across the upper and middle headwater zones:
+#### 2. State Variable 2 — Fast Convective Trigger ($P_{6h,\max}$) & Kinematic Wave Routing
+To capture intense cloudbursts matching the watershed's Time of Concentration ($T_c = 6\text{ hours}$) without severing storms that straddle the current clock hour $t_0$, the engine evaluates rolling 6-hour accumulations across a cross-boundary window $t \in [t_0 - 5\text{h},\; t_0 + 24\text{h}]$ as well as the kinematically lagged upstream wave arriving at the valley bottleneck ($\tau_1 = 3\text{h}, \tau_2 = 3\text{h}, \tau_3 = 1\text{h}$):
 
 $$
-P_{6h,\max} = \max_{t} \left( \sum_{\tau = t}^{t + 5} P_{\tau} \right)
+P_{\text{routed}}(t) = \sum_{i \in \lbrace 1, 2, 3 \rbrace} \left(\frac{w_i}{0.90}\right) P_i(t - \tau_i), \qquad P_{6h,\max} = \max_{t \in [t_0 - 5, t_0 + 18]} \left( \sum_{\tau = t}^{t + 5} P_{\tau} \right)
 $$
 
 ---
 
 ### Path 1: Deterministic Engine — Dynamic USDA SCS Curve Number (`scs_cn.py`)
 
-The deterministic path quantifies how much rainfall fails to infiltrate the mountain soil and becomes **Effective Surface Runoff ($Q_{eff}$, in $\text{mm}$)** using the **USDA Soil Conservation Service Curve Number (SCS-CN)** method, enhanced with continuous Antecedent Moisture Condition (AMC) interpolation.
+The deterministic path quantifies how much rainfall fails to infiltrate the mountain soil and becomes **Effective Surface Runoff ($Q_{eff}$, in $\text{mm}$)** using the **USDA Soil Conservation Service Curve Number (SCS-CN)** method, enhanced with a smooth Hill saturation curve, tropical initial abstraction ($\lambda = 0.05$), and distributed point-runoff integration.
 
 #### 1. Hawkins et al. (1985) AMC Boundary Conversions
-From the basin-weighted baseline Curve Number $CN_{II}$ (representing average soil moisture), the dry-soil boundary ($CN_I$, AMC I) and saturated-soil boundary ($CN_{III}$, AMC III) are computed analytically:
+From the node or basin baseline Curve Number $CN_{II}$ (representing average soil moisture), the dry-soil boundary ($CN_I$, AMC I) and saturated-soil boundary ($CN_{III}$, AMC III) are computed analytically:
 
 $$
 CN_I = \frac{4.2 \cdot CN_{II}}{10.0 - 0.058 \cdot CN_{II}}, \qquad CN_{III} = \frac{23.0 \cdot CN_{II}}{10.0 + 0.13 \cdot CN_{II}}
 $$
 
-#### 2. Continuous Piecewise $API_t$ Interpolation
-Instead of discrete step-function jumps between AMC classes (which cause artificial discontinuities in operational forecasting), `scs_cn.py` interpolates the effective Curve Number $CN(API_t)$ continuously across four physical soil-moisture regimes:
+#### 2. Smooth $C^\infty$ Hill Saturation Curve for $CN(API_t)$
+Instead of discrete step-function jumps or piecewise linear kinks that prematurely clamp saturation at $75\text{ mm}$, `scs_cn.py` interpolates the effective Curve Number $CN(API_t)$ smoothly across $[CN_I, CN_{III}]$ via a Hill saturation function ($API_{50} = 40.0\text{ mm}$, shape $\gamma = 2.2$):
 
 $$
-CN(API_t) = \begin{cases}
-CN_I & \text{if } API_t \le 20\text{ mm} \quad \text{(AMC I: Dry Soil)} \\
-CN_I + \left(\dfrac{API_t - 20}{25}\right)(CN_{II} - CN_I) & \text{if } 20 < API_t < 45\text{ mm} \quad \text{(AMC II: Moist Soil)} \\
-CN_{II} + \left(\dfrac{API_t - 45}{30}\right)(CN_{III} - CN_{II}) & \text{if } 45 \le API_t < 75\text{ mm} \quad \text{(AMC II–III: Transition)} \\
-CN_{III} & \text{if } API_t \ge 75\text{ mm} \quad \text{(AMC III: Saturated Soil)}
-\end{cases}
+CN(API_t) = CN_I + \left(CN_{III} - CN_I\right) \cdot \frac{API_t^{\gamma}}{API_{50}^{\gamma} + API_t^{\gamma}}
 $$
 
-#### 3. Potential Maximum Soil Retention ($S$) and Effective Runoff ($Q_{eff}$)
-Given the dynamic Curve Number $CN(API_t)$, the potential maximum soil moisture retention $S$ (in $\text{mm}$) and initial abstraction $I_a = 0.2 S$ (surface depression storage and canopy interception) are evaluated as:
+with physical soil-moisture regime labels: **AMC I ($API_t < 28\text{ mm}$)**, **AMC II ($28 \le API_t < 58\text{ mm}$)**, **AMC II–III ($58 \le API_t < 85\text{ mm}$)**, and **AMC III ($API_t \ge 85\text{ mm}$)**.
+
+#### 3. Potential Maximum Soil Retention ($S$), Tropical Abstraction ($I_a = 0.05 S$), & Distributed Runoff ($Q_{eff}$)
+Given the dynamic Curve Number $CN(API_t)$, the potential maximum soil moisture retention $S$ (in $\text{mm}$) and tropical steep-escarpment initial abstraction $I_a = \lambda S$ ($\lambda = 0.05$) are evaluated as:
 
 $$
-S = \frac{25400}{CN(API_t)} - 254, \qquad I_a = 0.2 \cdot S
+S = \frac{25400}{CN(API_t)} - 254, \qquad I_a = 0.05 \cdot S
 $$
 
-Finally, for a given precipitation accumulation $P$ (evaluated over both the $24\text{-hour}$ basin forecast and the $6\text{-hour}$ headwater $T_c$ window), Effective Surface Runoff $Q_{eff}$ is obtained via the SCS runoff equation:
+For a given precipitation accumulation $P$ (evaluated over both the $24\text{-hour}$ forecast and the $6\text{-hour}$ $T_c$ window), node-level Effective Surface Runoff $Q_{eff,i}$ is obtained via the SCS runoff equation and integrated across the 4 nodes to prevent Jensen's Inequality spatial dilution:
 
 $$
-Q_{eff} = \begin{cases}
+Q_{eff}(P, S) = \begin{cases}
 0 & \text{if } P \le I_a \\
-\dfrac{(P - I_a)^2}{P + 0.8 \cdot S} & \text{if } P > I_a
-\end{cases}
+\dfrac{(P - I_a)^2}{P + 0.95 \cdot S} & \text{if } P > I_a
+\end{cases}, \qquad Q_{eff,\text{basin}} = \max\left(\sum_{i=1}^{4} w_i \, Q_{eff,i},\;\; Q_{eff}(\bar{P}, \overline{API}_t)\right)
 $$
 
 ---
@@ -183,36 +185,36 @@ $$
 
 Compound flash floods are bivariate phenomena: a moderate storm on saturated soil or an extreme cloudburst on moderately moist soil can produce catastrophic synergy. The probabilistic path applies **Extreme Value Theory (EVT)** to compute the **Joint Return Period ($T_{joint}$, in years)** of simultaneously observing a 6-hour convective burst $P_{6h,\max}$ and an antecedent soil moisture state $API_t$.
 
-#### 1. Peaks-Over-Threshold (POT) Generalized Pareto Distribution (GPD) Marginals
-For each random variable $X \in \lbrace P_{6h,\max}, API_t \rbrace$ with pre-calibrated 95th-percentile threshold $u$ (exceedance rate $\lambda_u = 0.05$), scale parameter $\sigma > 0$, and tail shape parameter $\xi$, the cumulative non-exceedance probability $F_X(x)$ for tail events ($x > u$) is modeled by a **Generalized Pareto Distribution**:
+#### 1. Peaks-Over-Threshold (POT) Generalized Pareto Distribution (GPD) Survival Marginals
+For each random variable $X \in \lbrace P_{6h,\max}, API_t \rbrace$ with pre-calibrated 95th-percentile threshold $u$ (exceedance rate $\lambda_u = 0.05$), scale parameter $\sigma > 0$, and tail shape parameter $\xi$, the upper-tail survival (exceedance) probability $\bar{F}_X(x) = 1 - F_X(x)$ for tail events ($x > u$) is modeled by a **Generalized Pareto Distribution**:
 
 $$
-F_X(x) = \begin{cases}
-1 - \lambda_u \left(1 + \xi \left(\dfrac{x - u}{\sigma}\right)\right)^{-1/\xi} & \text{for } \xi \neq 0 \\
-1 - \lambda_u \exp\left(-\dfrac{x - u}{\sigma}\right) & \text{for } \xi = 0
+\bar{F}_X(x) = \begin{cases}
+\lambda_u \left(1 + \xi \left(\dfrac{x - u}{\sigma}\right)\right)^{-1/\xi} & \text{for } \xi \neq 0 \\
+\lambda_u \exp\left(-\dfrac{x - u}{\sigma}\right) & \text{for } \xi = 0
 \end{cases}
 $$
 
-Letting $u_1 = F_{P_{6h}}(P_{6h,\max})$ and $v_1 = F_{API}(API_t)$ denote the resulting uniform marginal probabilities on $(0, 1)$, the engine next evaluates their joint tail behavior.
+Letting $\bar{u}_1 = \bar{F}_{P_{6h}}(P_{6h,\max})$ and $\bar{v}_1 = \bar{F}_{API}(API_t)$ denote the marginal exceedance probabilities (with $u_1 = 1 - \bar{u}_1$ and $v_1 = 1 - \bar{v}_1$), the engine next evaluates their joint tail behavior in log-survival space.
 
-#### 2. Bivariate Gumbel-Hougaard Copula
+#### 2. Log-Survival Bivariate Gumbel-Hougaard Copula
 Because extreme convective storms and wet-season soil saturation exhibit strong **upper-tail dependence** (they co-occur during persistent South Atlantic Convergence Zone — *ZCAS* — episodes), their joint cumulative distribution is coupled via the **Gumbel-Hougaard extreme-value copula** with dependence parameter $\theta \ge 1$ ($\theta = 1.326$ calibrated for the Rio Iconha headwaters):
 
 $$
-C_{\theta}(u_1, v_1) = \exp\left( -\left[ (-\ln u_1)^{\theta} + (-\ln v_1)^{\theta} \right]^{1/\theta} \right)
+A_{\theta}(\bar{u}_1, \bar{v}_1) = \left[ \left(-\operatorname{log1p}(-\bar{u}_1)\right)^{\theta} + \left(-\operatorname{log1p}(-\bar{v}_1)\right)^{\theta} \right]^{1/\theta}, \qquad C_{\theta}(u_1, v_1) = \exp\left(-A_{\theta}(\bar{u}_1, \bar{v}_1)\right)
 $$
 
-#### 3. Joint Exceedance Probability & Return Period ($T_{joint}$)
-By the inclusion-exclusion principle (survival probability), the **joint exceedance probability** $P(P_{6h} > p \cap API > a)$ that *both* rainfall intensity and antecedent soil saturation are simultaneously exceeded is:
+#### 3. Numerically Stable Joint Exceedance Probability & Return Period ($T_{joint}$)
+To prevent catastrophic floating-point subtraction cancellation when $u_1, v_1 \to 1$ ($\bar{u}_1, \bar{v}_1 \to 0$), the **joint exceedance probability** $p_{\text{joint}} = 1 - u_1 - v_1 + C_{\theta}(u_1, v_1)$ is evaluated directly via $\operatorname{expm1}$:
 
 $$
-p_{\text{joint}} = 1 - u_1 - v_1 + C_{\theta}(u_1, v_1)
+p_{\text{joint}} = \max\left(10^{-12},\quad \bar{u}_1 + \bar{v}_1 + \operatorname{expm1}\left(-A_{\theta}(\bar{u}_1, \bar{v}_1)\right),\quad \bar{u}_1 \cdot \bar{v}_1\right)
 $$
 
 Given $N_{\text{yr}} = 1,460$ non-overlapping 6-hour observation blocks per year, the **Bivariate Joint Return Period ($T_{joint}$, in years)** is:
 
 $$
-T_{\text{joint}} = \frac{1}{N_{\text{yr}} \cdot \max\left(10^{-7},\quad 1 - u_1 - v_1 + C_{\theta}(u_1, v_1)\right)}
+T_{\text{joint}} = \max\left(0.1,\quad \frac{1}{N_{\text{yr}} \cdot p_{\text{joint}}}\right)
 $$
 
 Pre-calibrated parameters stored in `src/iconha_monitoring/hydrology/copula_params.json`:
@@ -262,11 +264,11 @@ iconha-monitoring/
   - **Runtime Dependencies:**
     - `functions-framework>=3.10.2` — Google Cloud Run Functions HTTP runtime and local invocation wrapper
     - `google-cloud-storage>=2.18.0` — Publishes `status.json` and `card_whatsapp.png` to the GCS bucket
-    - `matplotlib>=3.11.2` — Hydrological time-series plotting and backtest verification charts
-    - `pillow>=10.4.0` — In-memory $1080 \times 1080$ PNG rendering for the WhatsApp warning card
-    - `requests>=2.32.0` — HTTP client for Open-Meteo and Brazilian telemetry APIs
+    - `pillow>=10.4.0` — In-memory $1080 \times 1080$ PNG rendering for the WhatsApp warning card (with `@lru_cache` TrueType font handle caching)
+    - `requests>=2.32.0` — Resilient HTTP client with exponential retry/backoff for Open-Meteo and Brazilian telemetry APIs
     - `tzdata>=2026.6` — IANA timezone database (`America/Sao_Paulo`)
   - **Development & Offline Calibration Dependencies (`[dependency-groups.dev]`):**
+    - `matplotlib>=3.11.2` — Used strictly offline in `scripts/backtest_jan2020.py` for hydrological time-series verification charts (decoupled from the production container to save $>120\text{ MB}$ of image size and cold-start overhead)
     - `pytest>=8.3.0` — Unit and integration test runner
     - `scipy>=1.14.0` — Used strictly offline in `scripts/calibrate_copula.py` to fit GPD marginals and Kendall's $\tau$
 
@@ -300,8 +302,8 @@ MPLBACKEND=Agg uv run python scripts/backtest_jan2020.py
 ## Zero-Cost Cloud Architecture Constraint ($0.00/Month)
 
 A foundational engineering rule of `iconha-monitoring` is **100% adherence to Google Cloud's Always Free Tier**:
-- **Region Pinning (`us-east1`):** All storage and compute resources run strictly in `us-east1` to qualify for the Always Free 5 GB Google Cloud Storage allowance (5,000 Class A writes and 50,000 Class B reads/month). Running every 30 minutes consumes only $2 \times 24 \times 30 = 1,440$ Class A writes/month per artifact — safely within free limits.
-- **No Runtime Heavy SciPy Dependencies:** Parameter fitting (`scipy.stats.genpareto`) is strictly decoupled into the offline calibration script (`scripts/calibrate_copula.py`). The production Cloud Run Function evaluates the GPD and Gumbel-Hougaard Copula using pure Python standard-library `math` routines, keeping cold-start memory footprints tiny.
+- **Region Pinning (`us-east1`) & Edge-Cache Slot Alignment:** All storage and compute resources run strictly in `us-east1` to qualify for the Always Free 5 GB Google Cloud Storage allowance (5,000 Class A writes and 50,000 Class B reads/month). Running every 30 minutes consumes only $2 \times 24 \times 30 = 1,440$ Class A writes/month per artifact, and the frontend quantizes requests to 5-minute cache slots (`?v=slot`) matching `Cache-Control: public, max-age=300` so concurrent user traffic during storms is served from Google's edge cache rather than consuming raw Class B bucket reads.
+- **No Runtime Heavy SciPy / Matplotlib / NumPy Dependencies:** Parameter fitting (`scipy.stats.genpareto`) and historical hydrograph plotting (`matplotlib`) are strictly decoupled into the offline scripts (`scripts/calibrate_copula.py` and `scripts/backtest_jan2020.py`). The production Cloud Run Function evaluates the GPD and Gumbel-Hougaard Copula using pure Python standard-library `math` routines (`log1p`, `expm1`) and renders cards via cached Pillow font handles, keeping container images $>120\text{ MB}$ smaller and cold-start memory footprints minimal.
 - **Private Compute Endpoint:** The Cloud Run Function (`iconha-monitoring-engine`) is deployed with `--no-allow-unauthenticated` and triggered exclusively via OIDC tokens from Cloud Scheduler, preventing billing abuse or denial-of-wallet attacks.
 
 ---

@@ -19,13 +19,14 @@ from src.iconha_monitoring.config import (
 )
 from src.iconha_monitoring.hydrology.state_vars import (
     compute_continuous_api,
-    compute_rolling_tc_max,
+    compute_rolling_tc_window,
 )
 from src.iconha_monitoring.hydrology.scs_cn import compute_scs_effective_runoff
 from src.iconha_monitoring.hydrology.copula_gpd import (
     load_copula_params,
     gumbel_copula_joint_return_period,
 )
+from src.iconha_monitoring.hydrology.decision import _classify_tier_with_hysteresis
 
 
 def fetch_jan2020_archive() -> list[dict]:
@@ -48,11 +49,23 @@ def fetch_jan2020_archive() -> list[dict]:
     return data if isinstance(data, list) else [data]
 
 
-def simulate_hour(raw_locations: list[dict], curr_idx: int, copula_params: dict, scale: float = 1.0) -> dict:
+def simulate_hour(
+    raw_locations: list[dict],
+    curr_idx: int,
+    copula_params: dict,
+    scale: float = 1.0,
+    previous_tier: str | None = None,
+) -> dict:
     weighted_api_t = 0.0
     weighted_f24h = 0.0
     weighted_cn_base = 0.0
-    upstream_tc_6h_max = 0.0
+    distributed_q_24h = 0.0
+    distributed_q_6h = 0.0
+    max_node_tc_6h = 0.0
+
+    straddle_past = TC_WINDOW_HOURS - 1
+    routed_len = straddle_past + 24
+    routed_up_series = [0.0] * routed_len
 
     for idx, point in enumerate(BASIN_POINTS):
         precip_raw = [float(x or 0.0) for x in raw_locations[idx]["hourly"]["precipitation"]]
@@ -61,35 +74,50 @@ def simulate_hour(raw_locations: list[dict], curr_idx: int, copula_params: dict,
 
         past_slice = precip[max(0, curr_idx - 336) : curr_idx]
         next_24h_slice = precip[curr_idx : curr_idx + 24]
+        tc_slice = precip[max(0, curr_idx - straddle_past) : min(len(precip), curr_idx + 24)]
 
         api_t = compute_continuous_api(past_slice, k_daily=API_DECAY_K_DAILY)
-        rolling_6h_max = compute_rolling_tc_max(next_24h_slice, window_hours=TC_WINDOW_HOURS)
+        rolling_6h_max = compute_rolling_tc_window(tc_slice, window_hours=TC_WINDOW_HOURS)["max_mm"]
         total_24h = sum(next_24h_slice)
 
+        scs_pt_24h = compute_scs_effective_runoff(total_24h, api_t, point["cn_ii"])
+        scs_pt_6h = compute_scs_effective_runoff(rolling_6h_max, api_t, point["cn_ii"])
+
         w = point["weight"]
+        lag = int(point.get("lag_hours", 0))
         weighted_api_t += w * api_t
         weighted_f24h += w * total_24h
         weighted_cn_base += w * point["cn_ii"]
+        distributed_q_24h += w * scs_pt_24h["effective_runoff_q_mm"]
+        distributed_q_6h += w * scs_pt_6h["effective_runoff_q_mm"]
 
-        if point["zone"] in ("upper", "middle") and rolling_6h_max > upstream_tc_6h_max:
-            upstream_tc_6h_max = rolling_6h_max
+        if point["zone"] in ("upper", "middle"):
+            if rolling_6h_max > max_node_tc_6h:
+                max_node_tc_6h = rolling_6h_max
+            up_w = w / 0.90
+            for k in range(routed_len):
+                target_hr = curr_idx - straddle_past + k - lag
+                if 0 <= target_hr < len(precip):
+                    routed_up_series[k] += up_w * precip[target_hr]
+
+    routed_tc_6h = compute_rolling_tc_window(routed_up_series, window_hours=TC_WINDOW_HOURS)["max_mm"]
+    upstream_tc_6h_max = max(max_node_tc_6h, routed_tc_6h)
 
     scs_24h = compute_scs_effective_runoff(weighted_f24h, weighted_api_t, weighted_cn_base)
     scs_6h = compute_scs_effective_runoff(upstream_tc_6h_max, weighted_api_t, weighted_cn_base)
 
-    q_24h = scs_24h["effective_runoff_q_mm"]
-    q_6h = scs_6h["effective_runoff_q_mm"]
+    q_24h = round(max(distributed_q_24h, scs_24h["effective_runoff_q_mm"]), 1)
+    q_6h = round(max(distributed_q_6h, scs_6h["effective_runoff_q_mm"]), 1)
     copula_res = gumbel_copula_joint_return_period(upstream_tc_6h_max, weighted_api_t, copula_params)
     t_joint = copula_res["joint_return_period_years"]
 
-    if q_24h >= 34.0 or q_6h >= 38.0 or t_joint >= 9.0:
-        tier = "VERMELHO"
-    elif q_24h >= 23.0 or q_6h >= 15.0 or t_joint >= 2.0:
-        tier = "LARANJA"
-    elif q_24h >= 8.0 or weighted_api_t >= 60.0 or t_joint >= 1.2:
-        tier = "AMARELO"
-    else:
-        tier = "VERDE"
+    tier = _classify_tier_with_hysteresis(
+        q_eff_24h=q_24h,
+        q_eff_6h=q_6h,
+        t_joint_years=t_joint,
+        weighted_api_t=weighted_api_t,
+        previous_tier=previous_tier,
+    )
 
     return {
         "time": raw_locations[0]["hourly"]["time"][curr_idx],
@@ -97,6 +125,7 @@ def simulate_hour(raw_locations: list[dict], curr_idx: int, copula_params: dict,
         "f24h": round(weighted_f24h, 1),
         "tc_6h": round(upstream_tc_6h_max, 1),
         "q_eff_24h": q_24h,
+        "q_eff_6h": q_6h,
         "t_joint_yr": t_joint,
         "tier": tier,
     }
@@ -123,8 +152,16 @@ def main():
     print(f"{'TIMESTAMP':<18} | {'API_t':>7} | {'Q_eff24h':>9} | {'T_joint':>9} | {'TIER'}")
     print("-" * 85)
 
+    prev_tier = None
     for idx in range(start_idx, end_idx + 1, 1):
-        res = simulate_hour(raw_locations, idx, copula_params, scale=args.scale)
+        res = simulate_hour(
+            raw_locations,
+            idx,
+            copula_params,
+            scale=args.scale,
+            previous_tier=prev_tier,
+        )
+        prev_tier = res["tier"]
         # Parse ISO string into a native datetime object for proper time-series plotting
         timestamps.append(datetime.fromisoformat(res["time"]))
         runoff_vals.append(res["q_eff_24h"])
