@@ -1,5 +1,5 @@
 import { fetchBasinStatus, DEMO_FALLBACK } from "./api.js";
-import { renderDashboard, setupTapExplanations } from "./components.js";
+import { renderDashboard, setupTapExplanations, setupViewTabs } from "./components.js";
 import { setupWhatsAppShare } from "./share.js";
 
 let latestState = { data: DEMO_FALLBACK, isCached: true, isDemo: true };
@@ -12,6 +12,7 @@ async function refreshStatus() {
 }
 
 async function init() {
+  setupViewTabs();
   setupWhatsAppShare(() => latestState.data);
   setupTapExplanations();
   await refreshStatus();

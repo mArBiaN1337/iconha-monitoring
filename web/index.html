@@ -9,6 +9,76 @@
 </head>
 <body>
 
+  <!-- TOP VIEW SWITCHER (INTRO GUIDE VS LIVE ANALYSIS TAB) -->
+  <nav class="view-tabs" aria-label="Alternar entre guia explicativo e painel de análise">
+    <button type="button" class="tab-btn is-active" id="tabIntroBtn" aria-selected="true" aria-controls="introView">
+      1. Como Funciona (Guia)
+    </button>
+    <button type="button" class="tab-btn" id="tabAnalysisBtn" aria-selected="false" aria-controls="analysisView">
+      2. Painel de Análise <span class="tab-live-dot" id="tabLiveDot" title="Status atual da bacia"></span>
+    </button>
+  </nav>
+
+  <!-- VIEW 1: INTRODUCTORY CONCEPT & PARAMETER GUIDE CARD (SHOWN FIRST) -->
+  <main class="intro-view" id="introView" aria-label="Introdução ao sistema e guia de parâmetros">
+    <section class="card intro-card">
+      <div class="intro-header">
+        <span class="intro-kicker">Monitoramento Hidrológico Independente • Rio Iconha (ES)</span>
+        <h1 class="intro-title">Alerta Antecipado de Enxurradas na Bacia do Rio Iconha</h1>
+        <p class="intro-lead">
+          <strong>Por que monitorar as montanhas?</strong> <strong>90% da água</strong> que chega ao centro de Iconha vem das cabeceiras na serra (<em>Crubixá, Monte Alegre e Duas Barras</em>). Uma chuva intensa na serra leva de <strong>3 a 6 horas</strong> para descer o vale e causar cheias na cidade — mesmo quando quase não chove na Sede.
+        </p>
+      </div>
+
+      <div class="intro-section">
+        <h2 class="intro-sec-title">1. Parâmetros Monitorados (Entradas)</h2>
+        <div class="intro-list">
+          <div class="intro-item">
+            <span class="intro-badge intro-badge--blue">Cabeceira 90% vs. Sede 10%</span>
+            <p>Compara a chuva prevista e já caída na <strong>serra</strong> (onde a enxurrada nasce) com a chuva local no <strong>vale urbano</strong>.</p>
+          </div>
+          <div class="intro-item">
+            <span class="intro-badge intro-badge--blue">Pico 6h (T<sub>c</sub>) e Onda em Trânsito</span>
+            <p>Maior chuva acumulada em janela de <strong>6 horas</strong> (Tempo de Concentração que a água leva da serra até a cidade).</p>
+          </div>
+          <div class="intro-item">
+            <span class="intro-badge intro-badge--amber">Solo 14d (API<sub>t</sub>) e Classes AMC</span>
+            <p>Umidade acumulada na terra nos últimos 14 dias: <strong>AMC I</strong> (seco, infiltra bem), <strong>AMC II</strong> (úmido) e <strong>AMC III</strong> (saturado, vira enxurrada).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="intro-section">
+        <h2 class="intro-sec-title">2. Saídas do Modelo (Diagnóstico de Risco)</h2>
+        <div class="intro-list">
+          <div class="intro-item">
+            <span class="intro-badge intro-badge--cyan">Escoamento Superficial (Q<sub>eff</sub>)</span>
+            <p>Volume de chuva (em mm) que <strong>o solo não consegue absorver</strong> e corre direto para subir o nível do rio (modelo físico <em>USDA SCS-CN</em>).</p>
+          </div>
+          <div class="intro-item">
+            <span class="intro-badge intro-badge--cyan">Tempo de Retorno Conjunto (Anos)</span>
+            <p>Raridade estatística da combinação <strong>chuva intensa na serra + solo já encharcado</strong> (modelo probabilístico <em>Cópula de Gumbel</em>).</p>
+          </div>
+        </div>
+
+        <div class="intro-tiers" aria-label="Escala de níveis de alerta">
+          <span class="tier-chip tier-chip--verde">🟢 Verde: Normal</span>
+          <span class="tier-chip tier-chip--amarelo">🟡 Amarelo: Atenção</span>
+          <span class="tier-chip tier-chip--laranja">🟠 Laranja: Risco Alto</span>
+          <span class="tier-chip tier-chip--vermelho">🔴 Vermelho: Cheia Crítica</span>
+        </div>
+      </div>
+
+      <button type="button" class="btn-intro-ok" id="openAnalysisBtn">
+        <span>OK, Entendi • Ver Painel de Análise</span>
+        <span class="intro-status-pill" id="introTierPill">Carregando...</span>
+      </button>
+    </section>
+  </main>
+
+  <!-- VIEW 2: LIVE HYDROLOGICAL ANALYSIS DASHBOARD -->
+  <div class="analysis-view" id="analysisView" hidden>
+
   <!-- BLOCK 1: COLOR-CODED RISK BANNER & RESILIENCE HEADER -->
   <header class="banner" id="riskBanner" aria-live="polite">
     <div class="banner-top">
@@ -117,11 +187,13 @@
     </a>
   </section>
 
+  </div><!-- /#analysisView -->
+
   <footer class="footer">
     <div class="footer-emergency">
       <span>Monitoramento Hidrológico Independente - Rio Iconha</span>
       <span aria-hidden="true">•</span>
-      <span id="appVersion">v2.0.0</span>
+      <span id="appVersion">v2.0.1</span>
     </div>
     <div class="footer-note">
       Iniciativa científica independente de previsão hidrometeorológica (SCS-CN + Cópula de Gumbel).

@@ -12,7 +12,7 @@ from src.iconha_monitoring.renderer.whatsapp_card import (
 def test_whatsapp_card_dimensions_and_all_tiers():
     for tier, banner in TIER_CONFIG.items():
         payload = {
-            "version": "2.0.0",
+            "version": "2.0.1",
             "updated_at_br": "16/11/2026 às 19:00",
             "risk_tier": tier,
             "banner": banner,

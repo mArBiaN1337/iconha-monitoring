@@ -2,7 +2,7 @@ const CACHE_KEY = "iconha_flood_status_v2";
 const utf8Decoder = new TextDecoder("utf-8");
 
 export const DEMO_FALLBACK = {
-  version: "2.0.0",
+  version: "2.0.1",
   updated_at_iso: "2026-11-16T00:00:00-03:00",
   updated_at_br: "16/11/2026 às 00:00",
   risk_tier: "VERDE",

@@ -10,7 +10,7 @@ def get_version() -> str:
             data = tomllib.load(f)
             return data["project"]["version"]
     except Exception:
-        return "2.0.0"
+        return "2.0.1"
 
 
 __version__ = get_version()

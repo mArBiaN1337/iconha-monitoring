@@ -115,6 +115,33 @@ function formatReturnPeriodDisplay(val) {
   return `${num.toFixed(1)} anos`;
 }
 
+export function setupViewTabs() {
+  const tabIntroBtn = document.getElementById("tabIntroBtn");
+  const tabAnalysisBtn = document.getElementById("tabAnalysisBtn");
+  const openAnalysisBtn = document.getElementById("openAnalysisBtn");
+  const introView = document.getElementById("introView");
+  const analysisView = document.getElementById("analysisView");
+
+  if (!tabIntroBtn || !tabAnalysisBtn || !introView || !analysisView) return;
+
+  const setView = (mode) => {
+    const showIntro = mode === "intro";
+    introView.hidden = !showIntro;
+    analysisView.hidden = showIntro;
+    tabIntroBtn.classList.toggle("is-active", showIntro);
+    tabIntroBtn.setAttribute("aria-selected", String(showIntro));
+    tabAnalysisBtn.classList.toggle("is-active", !showIntro);
+    tabAnalysisBtn.setAttribute("aria-selected", String(!showIntro));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  tabIntroBtn.addEventListener("click", () => setView("intro"));
+  tabAnalysisBtn.addEventListener("click", () => setView("analysis"));
+  if (openAnalysisBtn) {
+    openAnalysisBtn.addEventListener("click", () => setView("analysis"));
+  }
+}
+
 export function setupTapExplanations() {
   // [UI-04] Mobile touch accessibility: tapping any underlined metric shows its explanation
   const explainEl = document.getElementById("soilExplain");
@@ -149,6 +176,19 @@ export function renderDashboard(data, isCached = false, isDemo = false) {
   const bannerEl = document.getElementById("riskBanner");
   bannerEl.style.background = tierStyle.bg;
   bannerEl.classList.toggle("banner--light", tierStyle.light);
+
+  // Sync live tier status pill on the Introductory Guide Card & Tab Indicator
+  const introTierPill = document.getElementById("introTierPill");
+  if (introTierPill) {
+    introTierPill.textContent = `Agora: NÍVEL ${tierKey}`;
+    introTierPill.style.background = tierStyle.bg;
+    introTierPill.style.color = tierStyle.light ? "#0f172a" : "#ffffff";
+  }
+  const tabLiveDot = document.getElementById("tabLiveDot");
+  if (tabLiveDot) {
+    tabLiveDot.style.background = tierStyle.bg;
+    tabLiveDot.title = b.title || `NÍVEL ${tierKey}`;
+  }
 
   // [UI-01] Hydrological Trajectory & Trend Badge
   const trendBadge = document.getElementById("trendBadge");
