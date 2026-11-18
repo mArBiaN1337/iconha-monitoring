@@ -77,9 +77,14 @@ jobs:
           cat << 'EOF' > cleanup-policy.json
           [
             {
+              "name": "keep-latest-build",
+              "action": {"type": "Keep"},
+              "mostRecentVersions": {"keepCount": 1}
+            },
+            {
               "name": "delete-old-builds",
               "action": {"type": "Delete"},
-              "mostRecentVersions": {"keepCount": 1}
+              "condition": {"tagState": "ANY"}
             }
           ]
           EOF
