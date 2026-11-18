@@ -210,10 +210,10 @@ $$
 Letting $s_u = S_{P}(P_{6h,\max})$ and $s_v = S_{API}(API_t)$ denote the marginal exceedance probabilities — with non-exceedance CDF values $u_1 = 1 - s_u$ and $v_1 = 1 - s_v$ — the engine next evaluates their joint tail behavior in log-survival space.
 
 #### 2. Log-Survival Bivariate Gumbel-Hougaard Copula
-Because extreme convective storms and wet-season soil saturation exhibit strong **upper-tail dependence** (they co-occur during persistent South Atlantic Convergence Zone — *ZCAS* — episodes), their joint cumulative distribution is coupled via the **Gumbel-Hougaard extreme-value copula** with dependence parameter $\theta \ge 1$ (calibrated at $\theta = 1.326$ for the Rio Iconha headwaters):
+Because extreme convective storms and wet-season soil saturation exhibit strong **upper-tail dependence** (they co-occur during persistent South Atlantic Convergence Zone — *ZCAS* — episodes), their joint cumulative distribution is coupled via the **Gumbel-Hougaard extreme-value copula** with dependence parameter $\theta \ge 1$ (calibrated at $\theta = 1.326$ for the Rio Iconha headwaters). Expressing $u_1 = 1 - s_u$ and $v_1 = 1 - s_v$ in terms of the survival probabilities:
 
 $$
-A_{\theta}(s_u, s_v) = \left[ \left(-\mathrm{log1p}(-s_u)\right)^{\theta} + \left(-\mathrm{log1p}(-s_v)\right)^{\theta} \right]^{1/\theta}
+A_{\theta}(s_u, s_v) = \left[ \left(-\ln(1 - s_u)\right)^{\theta} + \left(-\ln(1 - s_v)\right)^{\theta} \right]^{1/\theta}
 $$
 
 $$
@@ -221,10 +221,10 @@ C_{\theta}(u_1, v_1) = \exp\left(-A_{\theta}(s_u, s_v)\right)
 $$
 
 #### 3. Numerically Stable Joint Exceedance Probability & Return Period $(T_{\text{joint}})$
-To prevent catastrophic floating-point subtraction cancellation when $u_1, v_1 \to 1$ — that is, as $s_u, s_v \to 0$ — the **joint exceedance probability** $p_{\text{joint}} = 1 - u_1 - v_1 + C_{\theta}(u_1, v_1)$ is evaluated directly via `expm1`:
+To prevent catastrophic floating-point subtraction cancellation when $u_1, v_1 \to 1$ — that is, as $s_u, s_v \to 0$ — the **joint exceedance probability** $p_{\text{joint}} = 1 - u_1 - v_1 + C_{\theta}(u_1, v_1)$ is rewritten in survival form (where `copula_gpd.py` evaluates $\ln(1 - s)$ via `math.log1p(-s)` and $\exp(-A_{\theta}) - 1$ via `math.expm1(-A)` to preserve full IEEE-754 tail precision):
 
 $$
-p_{\text{joint}} = \max\left(10^{-12},\quad s_u + s_v + \mathrm{expm1}\left(-A_{\theta}(s_u, s_v)\right),\quad s_u \cdot s_v\right)
+p_{\text{joint}} = \max\left(10^{-12},\quad s_u + s_v + \left[\exp\left(-A_{\theta}(s_u, s_v)\right) - 1\right],\quad s_u \cdot s_v\right)
 $$
 
 Given $N_{\text{yr}} = 1,460$ non-overlapping 6-hour observation blocks per year, the **Bivariate Joint Return Period** $T_{\text{joint}}$ (in years) is:
