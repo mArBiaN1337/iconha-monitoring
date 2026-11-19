@@ -84,7 +84,10 @@ jobs:
             {
               "name": "delete-old-builds",
               "action": {"type": "Delete"},
-              "condition": {"tagState": "ANY"}
+              "condition": {
+                "tagState": "ANY",
+                "olderThan": "86400s"
+              }
             }
           ]
           EOF
